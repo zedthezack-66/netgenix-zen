@@ -8,6 +8,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const Reports = () => {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -23,12 +25,12 @@ export const Reports = () => {
       const today = new Date().toISOString().split("T")[0];
       
       const [jobs, expenses] = await Promise.all([
-        supabase.from("jobs").select("*").eq("completion_date", today),
+        supabase.from("jobs").select("*").eq("completion_date", today).eq("status", "completed"),
         supabase.from("expenses").select("*").eq("expense_date", today),
       ]);
       
       const { data: allMaterials } = await supabase.from("materials").select("*");
-      const materials = { data: allMaterials?.filter(m => m.quantity < m.threshold) || [] };
+      const materials = allMaterials?.filter(m => Number(m.quantity) < Number(m.threshold)) || [];
 
       const revenue = jobs.data?.reduce((sum, j) => sum + Number(j.cost), 0) || 0;
       const expenseTotal = expenses.data?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
@@ -40,7 +42,7 @@ export const Reports = () => {
         expenses: expenseTotal,
         profit,
         jobs_completed: jobs.data?.length || 0,
-        low_stock_items: materials.data?.length || 0,
+        low_stock_items: materials.length,
       };
 
       // Save to database
@@ -50,9 +52,89 @@ export const Reports = () => {
         report_data: reportData as any,
       });
 
+      // Generate PDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      // Header
+      doc.setFillColor(14, 165, 233);
+      doc.rect(0, 0, pageWidth, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text("NetGenix", 14, 20);
+      doc.setFontSize(14);
+      doc.text("Daily Summary Report", 14, 32);
+      
+      // Date
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.text(`Date: ${format(new Date(), "MMM dd, yyyy")}`, 14, 55);
+      
+      // Summary Stats
+      doc.setFontSize(16);
+      doc.text("Performance Summary", 14, 70);
+      
+      autoTable(doc, {
+        startY: 75,
+        head: [["Metric", "Value"]],
+        body: [
+          ["Jobs Completed", reportData.jobs_completed.toString()],
+          ["Revenue", `$${revenue.toFixed(2)}`],
+          ["Expenses", `$${expenseTotal.toFixed(2)}`],
+          ["Net Profit", `$${profit.toFixed(2)}`],
+          ["Low Stock Items", reportData.low_stock_items.toString()],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [14, 165, 233] },
+      });
+
+      // Jobs Details
+      if (jobs.data && jobs.data.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Completed Jobs", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Client", "Job Type", "Cost"]],
+          body: jobs.data.map(j => [j.client_name, j.job_type, `$${Number(j.cost).toFixed(2)}`]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+        });
+      }
+
+      // Expenses Details
+      if (expenses.data && expenses.data.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Expenses", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Category", "Description", "Amount"]],
+          body: expenses.data.map(e => [e.category, e.description || "-", `$${Number(e.amount).toFixed(2)}`]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+        });
+      }
+
+      // Low Stock Materials
+      if (materials.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Low Stock Alert", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Material", "Current Stock", "Threshold"]],
+          body: materials.map(m => [m.name, `${m.quantity} ${m.unit}`, `${m.threshold} ${m.unit}`]),
+          theme: "striped",
+          headStyles: { fillColor: [239, 68, 68] },
+        });
+      }
+
+      doc.save(`NetGenix-Daily-Report-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+
       toast({
         title: "Daily Report Generated",
-        description: `Report for ${format(new Date(), "MMM dd, yyyy")} has been created.`,
+        description: `PDF downloaded for ${format(new Date(), "MMM dd, yyyy")}`,
       });
     } catch (error: any) {
       toast({
@@ -98,9 +180,68 @@ export const Reports = () => {
         report_data: reportData as any,
       });
 
+      // Generate PDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      // Header
+      doc.setFillColor(14, 165, 233);
+      doc.rect(0, 0, pageWidth, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text("NetGenix", 14, 20);
+      doc.setFontSize(14);
+      doc.text("VAT Report", 14, 32);
+      
+      // Period
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.text(`Period: ${reportData.period}`, 14, 55);
+      
+      // VAT Summary
+      doc.setFontSize(16);
+      doc.text("VAT Summary", 14, 70);
+      
+      autoTable(doc, {
+        startY: 75,
+        head: [["Description", "Amount"]],
+        body: [
+          ["Total Sales (Excl. VAT)", `$${totalSales.toFixed(2)}`],
+          ["VAT Rate", `${(vatRate * 100).toFixed(0)}%`],
+          ["VAT Amount", `$${vatAmount.toFixed(2)}`],
+          ["Total Due (Incl. VAT)", `$${totalDue.toFixed(2)}`],
+          ["Number of Jobs", reportData.jobs_count.toString()],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [14, 165, 233] },
+      });
+
+      // Jobs Breakdown
+      if (jobs && jobs.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Jobs Breakdown", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Date", "Client", "Job Type", "Amount"]],
+          body: jobs.map(j => [
+            j.completion_date || "-",
+            j.client_name,
+            j.job_type,
+            `$${Number(j.cost).toFixed(2)}`
+          ]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+          foot: [["", "", "Total:", `$${totalSales.toFixed(2)}`]],
+          footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
+        });
+      }
+
+      doc.save(`NetGenix-VAT-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
+
       toast({
         title: "VAT Report Generated",
-        description: `Total Sales: $${totalSales.toFixed(2)} | VAT: $${vatAmount.toFixed(2)}`,
+        description: `PDF downloaded for period ${reportData.period}`,
       });
     } catch (error: any) {
       toast({

@@ -9,6 +9,7 @@ import { JobsManager } from "@/components/JobsManager";
 import { ExpensesManager } from "@/components/ExpensesManager";
 import { MaterialsManager } from "@/components/MaterialsManager";
 import { Reports } from "@/components/Reports";
+import { PerformanceCharts } from "@/components/PerformanceCharts";
 import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -113,6 +114,7 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-6">
             <Dashboard />
+            <PerformanceCharts />
           </TabsContent>
 
           <TabsContent value="jobs">
