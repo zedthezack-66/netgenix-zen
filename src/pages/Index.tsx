@@ -8,7 +8,8 @@ import { Dashboard } from "@/components/Dashboard";
 import { JobsManager } from "@/components/JobsManager";
 import { ExpensesManager } from "@/components/ExpensesManager";
 import { MaterialsManager } from "@/components/MaterialsManager";
-import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package } from "lucide-react";
+import { Reports } from "@/components/Reports";
+import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -59,9 +60,12 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light/20 via-background to-secondary-light/20">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Mesh Background */}
+      <div className="absolute inset-0 bg-[var(--gradient-mesh)] opacity-60 pointer-events-none" />
+      
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10 shadow-sm relative">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -82,24 +86,28 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 relative">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="dashboard" className="gap-2">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid bg-card/50 backdrop-blur-sm">
+            <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="gap-2">
+            <TabsTrigger value="jobs" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Briefcase className="h-4 w-4" />
               Jobs
             </TabsTrigger>
-            <TabsTrigger value="expenses" className="gap-2">
+            <TabsTrigger value="expenses" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <DollarSign className="h-4 w-4" />
               Expenses
             </TabsTrigger>
-            <TabsTrigger value="materials" className="gap-2">
+            <TabsTrigger value="materials" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Package className="h-4 w-4" />
               Materials
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <FileText className="h-4 w-4" />
+              Reports
             </TabsTrigger>
           </TabsList>
 
@@ -117,6 +125,10 @@ const Index = () => {
 
           <TabsContent value="materials">
             <MaterialsManager />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <Reports />
           </TabsContent>
         </Tabs>
       </main>

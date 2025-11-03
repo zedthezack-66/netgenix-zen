@@ -135,14 +135,16 @@ export const Dashboard = () => {
     icon: any;
     trend?: "up" | "down";
   }) => (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-lg transition-all duration-300 border-border/50 bg-card/50 backdrop-blur-sm group">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+        <div className="text-3xl font-bold tracking-tight">{value}</div>
+        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
           {trend === "up" && <TrendingUp className="h-3 w-3 text-success" />}
           {trend === "down" && <TrendingDown className="h-3 w-3 text-destructive" />}
           {description}
@@ -152,7 +154,7 @@ export const Dashboard = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Jobs"
@@ -184,23 +186,26 @@ export const Dashboard = () => {
       </div>
 
       {stats.lowStockItems > 0 && (
-        <Card className="border-warning bg-warning/5">
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <AlertTriangle className="h-5 w-5 text-warning mr-2" />
-            <CardTitle className="text-warning">Low Stock Alert</CardTitle>
+        <Card className="border-warning bg-warning/10 backdrop-blur-sm animate-pulse">
+          <CardHeader className="flex flex-row items-center space-y-0 pb-3">
+            <div className="h-10 w-10 rounded-lg bg-warning/20 flex items-center justify-center mr-3">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+            </div>
+            <CardTitle className="text-warning font-bold">Low Stock Alert</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm">
+            <p className="text-sm font-medium">
               {stats.lowStockItems} material{stats.lowStockItems > 1 ? "s" : ""} running
-              low on stock
+              low on stock. Restock soon to avoid disruptions.
             </p>
           </CardContent>
         </Card>
       )}
 
-      <Card>
+      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>7-Day Performance</CardTitle>
+          <CardTitle className="text-xl">7-Day Performance Overview</CardTitle>
+          <p className="text-sm text-muted-foreground">Track your revenue and expenses over the last week</p>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>

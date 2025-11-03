@@ -59,6 +59,14 @@ All colors MUST be HSL.
     --gradient-secondary: linear-gradient(135deg, hsl(187 85% 43%), hsl(187 85% 53%));
     
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --shadow-glow: 0 0 40px hsl(210 100% 50% / 0.15);
+    --shadow-card: 0 2px 8px hsl(210 100% 40% / 0.08);
+    --shadow-card-hover: 0 8px 24px hsl(210 100% 40% / 0.12);
+    
+    --gradient-mesh: radial-gradient(at 40% 20%, hsl(210 100% 85% / 0.3) 0px, transparent 50%),
+                     radial-gradient(at 80% 0%, hsl(187 85% 88% / 0.3) 0px, transparent 50%),
+                     radial-gradient(at 0% 50%, hsl(32 100% 90% / 0.2) 0px, transparent 50%);
   }
 
   .dark {
@@ -112,5 +120,30 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-in;
+  }
+  
+  .animate-slideUp {
+    animation: slideUp 0.5s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
