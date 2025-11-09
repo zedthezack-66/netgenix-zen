@@ -272,7 +272,7 @@ export const MaterialsManager = () => {
                 <TableCell>
                   {material.threshold} {material.unit}
                 </TableCell>
-                <TableCell>${material.cost_per_unit.toFixed(2)}</TableCell>
+                <TableCell>ZMW {material.cost_per_unit.toFixed(2)}</TableCell>
                 <TableCell>
                   {isLowStock(material) ? (
                     <Badge variant="destructive" className="gap-1">

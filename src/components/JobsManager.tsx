@@ -363,7 +363,7 @@ export const JobsManager = () => {
               <TableRow key={job.id}>
                 <TableCell className="font-medium">{job.client_name}</TableCell>
                 <TableCell>{job.job_type}</TableCell>
-                <TableCell>${job.cost.toFixed(2)}</TableCell>
+                <TableCell>ZMW {job.cost.toFixed(2)}</TableCell>
                 <TableCell>{getStatusBadge(job.status)}</TableCell>
                 <TableCell>
                   {job.completion_date

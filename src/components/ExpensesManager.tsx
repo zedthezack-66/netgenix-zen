@@ -246,7 +246,7 @@ export const ExpensesManager = () => {
                 </TableCell>
                 <TableCell className="font-medium">{expense.category}</TableCell>
                 <TableCell className="text-destructive font-semibold">
-                  -${expense.amount.toFixed(2)}
+                  -ZMW {expense.amount.toFixed(2)}
                 </TableCell>
                 <TableCell>{expense.description || "-"}</TableCell>
                 <TableCell className="text-right space-x-2">

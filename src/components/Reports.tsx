@@ -19,14 +19,19 @@ export const Reports = () => {
   const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateDailyReport = async () => {
+  const generateWeeklyReport = async () => {
     setGenerating(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      
+      const startDateStr = startDate.toISOString().split("T")[0];
+      const endDateStr = endDate.toISOString().split("T")[0];
       
       const [jobs, expenses] = await Promise.all([
-        supabase.from("jobs").select("*").eq("completion_date", today).eq("status", "completed"),
-        supabase.from("expenses").select("*").eq("expense_date", today),
+        supabase.from("jobs").select("*").gte("completion_date", startDateStr).lte("completion_date", endDateStr).eq("status", "completed"),
+        supabase.from("expenses").select("*").gte("expense_date", startDateStr).lte("expense_date", endDateStr),
       ]);
       
       const { data: allMaterials } = await supabase.from("materials").select("*");
@@ -37,7 +42,7 @@ export const Reports = () => {
       const profit = revenue - expenseTotal;
 
       const reportData = {
-        date: today,
+        period: `${format(startDate, "MMM dd")} - ${format(endDate, "MMM dd, yyyy")}`,
         revenue,
         expenses: expenseTotal,
         profit,
@@ -45,10 +50,9 @@ export const Reports = () => {
         low_stock_items: materials.length,
       };
 
-      // Save to database
       await supabase.from("reports").insert({
-        report_type: "daily",
-        report_date: today,
+        report_type: "weekly",
+        report_date: endDateStr,
         report_data: reportData as any,
       });
 
@@ -56,21 +60,18 @@ export const Reports = () => {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       
-      // Header
       doc.setFillColor(14, 165, 233);
       doc.rect(0, 0, pageWidth, 40, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.text("NetGenix", 14, 20);
       doc.setFontSize(14);
-      doc.text("Daily Summary Report", 14, 32);
+      doc.text("Weekly Summary Report", 14, 32);
       
-      // Date
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
-      doc.text(`Date: ${format(new Date(), "MMM dd, yyyy")}`, 14, 55);
+      doc.text(`Period: ${reportData.period}`, 14, 55);
       
-      // Summary Stats
       doc.setFontSize(16);
       doc.text("Performance Summary", 14, 70);
       
@@ -79,16 +80,15 @@ export const Reports = () => {
         head: [["Metric", "Value"]],
         body: [
           ["Jobs Completed", reportData.jobs_completed.toString()],
-          ["Revenue", `$${revenue.toFixed(2)}`],
-          ["Expenses", `$${expenseTotal.toFixed(2)}`],
-          ["Net Profit", `$${profit.toFixed(2)}`],
+          ["Revenue", `ZMW ${revenue.toFixed(2)}`],
+          ["Expenses", `ZMW ${expenseTotal.toFixed(2)}`],
+          ["Net Profit", `ZMW ${profit.toFixed(2)}`],
           ["Low Stock Items", reportData.low_stock_items.toString()],
         ],
         theme: "grid",
         headStyles: { fillColor: [14, 165, 233] },
       });
 
-      // Jobs Details
       if (jobs.data && jobs.data.length > 0) {
         doc.setFontSize(16);
         doc.text("Completed Jobs", 14, (doc as any).lastAutoTable.finalY + 15);
@@ -96,13 +96,12 @@ export const Reports = () => {
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
           head: [["Client", "Job Type", "Cost"]],
-          body: jobs.data.map(j => [j.client_name, j.job_type, `$${Number(j.cost).toFixed(2)}`]),
+          body: jobs.data.map(j => [j.client_name, j.job_type, `ZMW ${Number(j.cost).toFixed(2)}`]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
         });
       }
 
-      // Expenses Details
       if (expenses.data && expenses.data.length > 0) {
         doc.setFontSize(16);
         doc.text("Expenses", 14, (doc as any).lastAutoTable.finalY + 15);
@@ -110,13 +109,12 @@ export const Reports = () => {
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
           head: [["Category", "Description", "Amount"]],
-          body: expenses.data.map(e => [e.category, e.description || "-", `$${Number(e.amount).toFixed(2)}`]),
+          body: expenses.data.map(e => [e.category, e.description || "-", `ZMW ${Number(e.amount).toFixed(2)}`]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
         });
       }
 
-      // Low Stock Materials
       if (materials.length > 0) {
         doc.setFontSize(16);
         doc.text("Low Stock Alert", 14, (doc as any).lastAutoTable.finalY + 15);
@@ -130,11 +128,133 @@ export const Reports = () => {
         });
       }
 
-      doc.save(`NetGenix-Daily-Report-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      doc.save(`NetGenix-Weekly-Report-${format(startDate, "yyyy-MM-dd")}-to-${format(endDate, "yyyy-MM-dd")}.pdf`);
 
       toast({
-        title: "Daily Report Generated",
-        description: `PDF downloaded for ${format(new Date(), "MMM dd, yyyy")}`,
+        title: "Weekly Report Generated",
+        description: `PDF downloaded for ${reportData.period}`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const generateMonthlyReport = async () => {
+    setGenerating(true);
+    try {
+      const startDate = format(dateRange.from, "yyyy-MM-dd");
+      const endDate = format(dateRange.to, "yyyy-MM-dd");
+
+      const [jobs, expenses] = await Promise.all([
+        supabase.from("jobs").select("*").gte("completion_date", startDate).lte("completion_date", endDate).eq("status", "completed"),
+        supabase.from("expenses").select("*").gte("expense_date", startDate).lte("expense_date", endDate),
+      ]);
+
+      const { data: allMaterials } = await supabase.from("materials").select("*");
+      const materials = allMaterials?.filter(m => Number(m.quantity) < Number(m.threshold)) || [];
+
+      const revenue = jobs.data?.reduce((sum, j) => sum + Number(j.cost), 0) || 0;
+      const expenseTotal = expenses.data?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      const profit = revenue - expenseTotal;
+
+      const reportData = {
+        period: `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`,
+        revenue,
+        expenses: expenseTotal,
+        profit,
+        jobs_completed: jobs.data?.length || 0,
+        low_stock_items: materials.length,
+      };
+
+      await supabase.from("reports").insert({
+        report_type: "monthly",
+        report_date: endDate,
+        report_data: reportData as any,
+      });
+
+      // Generate PDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      doc.setFillColor(14, 165, 233);
+      doc.rect(0, 0, pageWidth, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text("NetGenix", 14, 20);
+      doc.setFontSize(14);
+      doc.text("Monthly Summary Report", 14, 32);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.text(`Period: ${reportData.period}`, 14, 55);
+      
+      doc.setFontSize(16);
+      doc.text("Performance Summary", 14, 70);
+      
+      autoTable(doc, {
+        startY: 75,
+        head: [["Metric", "Value"]],
+        body: [
+          ["Jobs Completed", reportData.jobs_completed.toString()],
+          ["Revenue", `ZMW ${revenue.toFixed(2)}`],
+          ["Expenses", `ZMW ${expenseTotal.toFixed(2)}`],
+          ["Net Profit", `ZMW ${profit.toFixed(2)}`],
+          ["Low Stock Items", reportData.low_stock_items.toString()],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [14, 165, 233] },
+      });
+
+      if (jobs.data && jobs.data.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Completed Jobs", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Client", "Job Type", "Cost"]],
+          body: jobs.data.map(j => [j.client_name, j.job_type, `ZMW ${Number(j.cost).toFixed(2)}`]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+        });
+      }
+
+      if (expenses.data && expenses.data.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Expenses", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Category", "Description", "Amount"]],
+          body: expenses.data.map(e => [e.category, e.description || "-", `ZMW ${Number(e.amount).toFixed(2)}`]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+        });
+      }
+
+      if (materials.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Low Stock Alert", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Material", "Current Stock", "Threshold"]],
+          body: materials.map(m => [m.name, `${m.quantity} ${m.unit}`, `${m.threshold} ${m.unit}`]),
+          theme: "striped",
+          headStyles: { fillColor: [239, 68, 68] },
+        });
+      }
+
+      doc.save(`NetGenix-Monthly-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
+
+      toast({
+        title: "Monthly Report Generated",
+        description: `PDF downloaded for period ${reportData.period}`,
       });
     } catch (error: any) {
       toast({
@@ -160,16 +280,24 @@ export const Reports = () => {
         .lte("completion_date", endDate)
         .eq("status", "completed");
 
-      const totalSales = jobs?.reduce((sum, j) => sum + Number(j.cost), 0) || 0;
       const vatRate = 0.15; // 15% VAT
-      const vatAmount = totalSales * vatRate;
-      const totalDue = totalSales + vatAmount;
+      
+      const jobsWithVAT = jobs?.map(j => {
+        const cost = Number(j.cost);
+        const vat = cost * vatRate;
+        const totalWithVAT = cost + vat;
+        return { ...j, cost, vat, totalWithVAT };
+      }) || [];
+
+      const totalSales = jobsWithVAT.reduce((sum, j) => sum + j.cost, 0);
+      const totalVAT = jobsWithVAT.reduce((sum, j) => sum + j.vat, 0);
+      const totalDue = totalSales + totalVAT;
 
       const reportData = {
         period: `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`,
         total_sales: totalSales,
         vat_rate: vatRate,
-        vat_amount: vatAmount,
+        vat_amount: totalVAT,
         total_due: totalDue,
         jobs_count: jobs?.length || 0,
       };
@@ -184,21 +312,18 @@ export const Reports = () => {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       
-      // Header
       doc.setFillColor(14, 165, 233);
       doc.rect(0, 0, pageWidth, 40, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.text("NetGenix", 14, 20);
       doc.setFontSize(14);
-      doc.text("VAT Report", 14, 32);
+      doc.text("Monthly VAT Report", 14, 32);
       
-      // Period
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
       doc.text(`Period: ${reportData.period}`, 14, 55);
       
-      // VAT Summary
       doc.setFontSize(16);
       doc.text("VAT Summary", 14, 70);
       
@@ -206,41 +331,42 @@ export const Reports = () => {
         startY: 75,
         head: [["Description", "Amount"]],
         body: [
-          ["Total Sales (Excl. VAT)", `$${totalSales.toFixed(2)}`],
+          ["Total Sales (Excl. VAT)", `ZMW ${totalSales.toFixed(2)}`],
           ["VAT Rate", `${(vatRate * 100).toFixed(0)}%`],
-          ["VAT Amount", `$${vatAmount.toFixed(2)}`],
-          ["Total Due (Incl. VAT)", `$${totalDue.toFixed(2)}`],
+          ["Total VAT Amount", `ZMW ${totalVAT.toFixed(2)}`],
+          ["Total Due (Incl. VAT)", `ZMW ${totalDue.toFixed(2)}`],
           ["Number of Jobs", reportData.jobs_count.toString()],
         ],
         theme: "grid",
         headStyles: { fillColor: [14, 165, 233] },
       });
 
-      // Jobs Breakdown
-      if (jobs && jobs.length > 0) {
+      if (jobsWithVAT.length > 0) {
         doc.setFontSize(16);
-        doc.text("Jobs Breakdown", 14, (doc as any).lastAutoTable.finalY + 15);
+        doc.text("Jobs Breakdown with VAT", 14, (doc as any).lastAutoTable.finalY + 15);
         
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Date", "Client", "Job Type", "Amount"]],
-          body: jobs.map(j => [
+          head: [["Date", "Client", "Job Type", "Amount (Excl. VAT)", "VAT (15%)", "Total (Incl. VAT)"]],
+          body: jobsWithVAT.map(j => [
             j.completion_date || "-",
             j.client_name,
             j.job_type,
-            `$${Number(j.cost).toFixed(2)}`
+            `ZMW ${j.cost.toFixed(2)}`,
+            `ZMW ${j.vat.toFixed(2)}`,
+            `ZMW ${j.totalWithVAT.toFixed(2)}`
           ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
-          foot: [["", "", "Total:", `$${totalSales.toFixed(2)}`]],
+          foot: [["", "", "Totals:", `ZMW ${totalSales.toFixed(2)}`, `ZMW ${totalVAT.toFixed(2)}`, `ZMW ${totalDue.toFixed(2)}`]],
           footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
         });
       }
 
-      doc.save(`NetGenix-VAT-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
+      doc.save(`NetGenix-Monthly-VAT-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
 
       toast({
-        title: "VAT Report Generated",
+        title: "Monthly VAT Report Generated",
         description: `PDF downloaded for period ${reportData.period}`,
       });
     } catch (error: any) {
@@ -256,7 +382,7 @@ export const Reports = () => {
 
   return (
     <div className="space-y-6 animate-slideUp">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
         <Card className="border-primary/20 hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -264,19 +390,81 @@ export const Reports = () => {
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Daily Summary Report</CardTitle>
-                <CardDescription>Generate today's performance report</CardDescription>
+                <CardTitle>Weekly Report</CardTitle>
+                <CardDescription>Last 7 days performance</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={generateDailyReport} 
+              onClick={generateWeeklyReport} 
               disabled={generating}
               className="w-full"
             >
               <Download className="mr-2 h-4 w-4" />
-              Generate Daily Report
+              Generate Weekly Report
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-accent/20 hover:shadow-lg transition-all duration-300">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <CardTitle>Monthly Report</CardTitle>
+                <CardDescription>Custom date range summary</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Date Range</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !dateRange && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "LLL dd")} -{" "}
+                          {format(dateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={{ from: dateRange.from, to: dateRange.to }}
+                    onSelect={(range: any) => range && setDateRange(range)}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Button 
+              onClick={generateMonthlyReport} 
+              disabled={generating}
+              className="w-full"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Generate Monthly Report
             </Button>
           </CardContent>
         </Card>
@@ -288,8 +476,8 @@ export const Reports = () => {
                 <FileSpreadsheet className="h-5 w-5 text-secondary" />
               </div>
               <div>
-                <CardTitle>VAT Report</CardTitle>
-                <CardDescription>Generate monthly VAT calculations</CardDescription>
+                <CardTitle>Monthly VAT Report</CardTitle>
+                <CardDescription>VAT breakdown per item</CardDescription>
               </div>
             </div>
           </CardHeader>

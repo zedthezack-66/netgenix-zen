@@ -164,21 +164,21 @@ export const Dashboard = () => {
         />
         <StatCard
           title="Revenue"
-          value={`$${stats.totalRevenue.toFixed(2)}`}
+          value={`ZMW ${stats.totalRevenue.toFixed(2)}`}
           description="From completed jobs"
           icon={DollarSign}
           trend="up"
         />
         <StatCard
           title="Expenses"
-          value={`$${stats.totalExpenses.toFixed(2)}`}
+          value={`ZMW ${stats.totalExpenses.toFixed(2)}`}
           description="Total expenses"
           icon={TrendingDown}
           trend="down"
         />
         <StatCard
           title="Profit"
-          value={`$${stats.profit.toFixed(2)}`}
+          value={`ZMW ${stats.profit.toFixed(2)}`}
           description="Net profit"
           icon={stats.profit >= 0 ? TrendingUp : TrendingDown}
           trend={stats.profit >= 0 ? "up" : "down"}
