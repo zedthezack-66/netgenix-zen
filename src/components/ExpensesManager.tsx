@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +44,6 @@ export const ExpensesManager = () => {
     description: "",
     expense_date: new Date().toISOString().split("T")[0],
   });
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchExpenses();
@@ -60,9 +59,7 @@ export const ExpensesManager = () => {
       if (error) throw error;
       setExpenses(data || []);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error fetching expenses",
+      toast.error("Failed to load expenses", {
         description: error.message,
       });
     } finally {
@@ -87,7 +84,9 @@ export const ExpensesManager = () => {
           .eq("id", editingExpense.id);
 
         if (error) throw error;
-        toast({ title: "Expense updated successfully!" });
+        toast.success("✅ Expense updated successfully!", {
+          description: `${formData.category} - ZMW ${formData.amount}`,
+        });
       } else {
         const { error } = await supabase.from("expenses").insert({
           ...formData,
@@ -96,16 +95,16 @@ export const ExpensesManager = () => {
         });
 
         if (error) throw error;
-        toast({ title: "Expense created successfully!" });
+        toast.success("✨ Expense created successfully!", {
+          description: `${formData.category} - ZMW ${formData.amount}`,
+        });
       }
 
       setOpen(false);
       resetForm();
       fetchExpenses();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to save expense", {
         description: error.message,
       });
     }
@@ -117,12 +116,12 @@ export const ExpensesManager = () => {
     try {
       const { error } = await supabase.from("expenses").delete().eq("id", id);
       if (error) throw error;
-      toast({ title: "Expense deleted successfully!" });
+      toast.success("🗑️ Expense deleted successfully!", {
+        description: "Expense has been removed from records",
+      });
       fetchExpenses();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to delete expense", {
         description: error.message,
       });
     }

@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Plus, Edit, Trash2, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -46,7 +46,6 @@ export const MaterialsManager = () => {
     threshold: "",
     cost_per_unit: "",
   });
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchMaterials();
@@ -62,9 +61,7 @@ export const MaterialsManager = () => {
       if (error) throw error;
       setMaterials(data || []);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error fetching materials",
+      toast.error("Failed to load materials", {
         description: error.message,
       });
     } finally {
@@ -91,21 +88,23 @@ export const MaterialsManager = () => {
           .eq("id", editingMaterial.id);
 
         if (error) throw error;
-        toast({ title: "Material updated successfully!" });
+        toast.success("✅ Material updated successfully!", {
+          description: `${formData.name} - ${formData.quantity} ${formData.unit}`,
+        });
       } else {
         const { error } = await supabase.from("materials").insert(materialData);
 
         if (error) throw error;
-        toast({ title: "Material created successfully!" });
+        toast.success("✨ Material created successfully!", {
+          description: `${formData.name} - ${formData.quantity} ${formData.unit}`,
+        });
       }
 
       setOpen(false);
       resetForm();
       fetchMaterials();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to save material", {
         description: error.message,
       });
     }
@@ -117,12 +116,12 @@ export const MaterialsManager = () => {
     try {
       const { error } = await supabase.from("materials").delete().eq("id", id);
       if (error) throw error;
-      toast({ title: "Material deleted successfully!" });
+      toast.success("🗑️ Material deleted successfully!", {
+        description: "Material has been removed from inventory",
+      });
       fetchMaterials();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to delete material", {
         description: error.message,
       });
     }

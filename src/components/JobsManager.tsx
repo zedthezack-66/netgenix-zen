@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/alert-dialog-confirm";
@@ -61,7 +61,6 @@ export const JobsManager = () => {
     status: "pending",
     completion_date: "",
   });
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchJobs();
@@ -95,9 +94,7 @@ export const JobsManager = () => {
       if (error) throw error;
       setJobs(data || []);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error fetching jobs",
+      toast.error("Failed to load jobs", {
         description: error.message,
       });
     } finally {
@@ -122,7 +119,9 @@ export const JobsManager = () => {
           .eq("id", editingJob.id);
 
         if (error) throw error;
-        toast({ title: "Job updated successfully!" });
+        toast.success("✅ Job updated successfully!", {
+          description: `${formData.client_name} - ${formData.job_type}`,
+        });
       } else {
         const { error } = await supabase.from("jobs").insert({
           ...formData,
@@ -131,16 +130,16 @@ export const JobsManager = () => {
         });
 
         if (error) throw error;
-        toast({ title: "Job created successfully!" });
+        toast.success("✨ Job created successfully!", {
+          description: `${formData.client_name} - ${formData.job_type}`,
+        });
       }
 
       setOpen(false);
       resetForm();
       fetchJobs();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to save job", {
         description: error.message,
       });
     }
@@ -152,12 +151,12 @@ export const JobsManager = () => {
     try {
       const { error } = await supabase.from("jobs").delete().eq("id", jobToDelete);
       if (error) throw error;
-      toast({ title: "Job deleted successfully!" });
+      toast.success("🗑️ Job deleted successfully!", {
+        description: "Job has been removed from the system",
+      });
       fetchJobs();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to delete job", {
         description: error.message,
       });
     } finally {

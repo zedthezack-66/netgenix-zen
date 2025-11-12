@@ -10,8 +10,10 @@ import { ExpensesManager } from "@/components/ExpensesManager";
 import { MaterialsManager } from "@/components/MaterialsManager";
 import { Reports } from "@/components/Reports";
 import { PerformanceCharts } from "@/components/PerformanceCharts";
-import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package, FileText } from "lucide-react";
+import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ReportHistory } from "@/components/ReportHistory";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -78,10 +80,13 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Admin Dashboard</p>
               </div>
             </div>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -89,7 +94,7 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 relative">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid bg-card/50 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid bg-card/50 backdrop-blur-sm">
             <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
@@ -109,6 +114,10 @@ const Index = () => {
             <TabsTrigger value="reports" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <FileText className="h-4 w-4" />
               Reports
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Archive className="h-4 w-4" />
+              History
             </TabsTrigger>
           </TabsList>
 
@@ -131,6 +140,10 @@ const Index = () => {
 
           <TabsContent value="reports">
             <Reports />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <ReportHistory />
           </TabsContent>
         </Tabs>
       </main>

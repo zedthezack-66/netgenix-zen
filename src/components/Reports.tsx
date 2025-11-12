@@ -6,8 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { FileText, Download, Calendar as CalendarIcon, FileSpreadsheet } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -17,7 +17,6 @@ export const Reports = () => {
     to: new Date(),
   });
   const [generating, setGenerating] = useState(false);
-  const { toast } = useToast();
 
   const generateWeeklyReport = async () => {
     setGenerating(true);
@@ -130,14 +129,11 @@ export const Reports = () => {
 
       doc.save(`NetGenix-Weekly-Report-${format(startDate, "yyyy-MM-dd")}-to-${format(endDate, "yyyy-MM-dd")}.pdf`);
 
-      toast({
-        title: "Weekly Report Generated",
+      toast.success("📊 Weekly Report Generated!", {
         description: `PDF downloaded for ${reportData.period}`,
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to generate report", {
         description: error.message,
       });
     } finally {
@@ -252,14 +248,11 @@ export const Reports = () => {
 
       doc.save(`NetGenix-Monthly-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
 
-      toast({
-        title: "Monthly Report Generated",
+      toast.success("📊 Monthly Report Generated!", {
         description: `PDF downloaded for period ${reportData.period}`,
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to generate report", {
         description: error.message,
       });
     } finally {
@@ -365,14 +358,11 @@ export const Reports = () => {
 
       doc.save(`NetGenix-Monthly-VAT-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
 
-      toast({
-        title: "Monthly VAT Report Generated",
+      toast.success("📊 Monthly VAT Report Generated!", {
         description: `PDF downloaded for period ${reportData.period}`,
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to generate report", {
         description: error.message,
       });
     } finally {
