@@ -144,6 +144,11 @@ const Auth = () => {
             </button>
           </div>
         </CardContent>
+        <div className="px-6 py-4 text-center border-t border-border/50">
+          <p className="text-xs text-muted-foreground">
+            © 2025 NetGenix. System Powered by ZEDZACK TECH.
+          </p>
+        </div>
       </Card>
     </div>
   );

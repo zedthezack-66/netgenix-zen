@@ -315,6 +315,10 @@ export const Reports = () => {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       
+      // Load TPIN from settings
+      const settings = JSON.parse(localStorage.getItem("netgenix_settings") || "{}");
+      const tpin = settings.tpin || "Not Set";
+      
       doc.setFillColor(14, 165, 233);
       doc.rect(0, 0, pageWidth, 40, "F");
       doc.setTextColor(255, 255, 255);
@@ -331,12 +335,13 @@ export const Reports = () => {
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
       doc.text(`Period: ${reportData.period}`, 14, 55);
+      doc.text(`TPIN: ${tpin}`, 14, 62);
       
       doc.setFontSize(16);
-      doc.text("VAT Summary", 14, 70);
+      doc.text("VAT Summary", 14, 75);
       
       autoTable(doc, {
-        startY: 75,
+        startY: 80,
         head: [["Description", "Amount"]],
         body: [
           ["Total Amount (Incl. VAT)", `ZMW ${totalWithVAT.toFixed(2)}`],
