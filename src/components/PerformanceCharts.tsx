@@ -20,28 +20,48 @@ export const PerformanceCharts = () => {
     setLoading(true);
     try {
       const days = period === "7days" ? 7 : 30;
-      const data = [];
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - (days - 1));
+      const startDateStr = startDate.toISOString().split("T")[0];
+      const endDateStr = new Date().toISOString().split("T")[0];
 
+      // Fetch all data in one query for the date range
+      const [jobs, expenses] = await Promise.all([
+        supabase.from("jobs").select("*").gte("completion_date", startDateStr).lte("completion_date", endDateStr).eq("status", "completed"),
+        supabase.from("expenses").select("*").gte("expense_date", startDateStr).lte("expense_date", endDateStr),
+      ]);
+
+      // Group data by date
+      const dateMap = new Map();
       for (let i = days - 1; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split("T")[0];
-
-        const [jobs, expenses] = await Promise.all([
-          supabase.from("jobs").select("*").eq("completion_date", dateStr).eq("status", "completed"),
-          supabase.from("expenses").select("*").eq("expense_date", dateStr),
-        ]);
-
-        const revenue = jobs.data?.reduce((sum, j) => sum + Number(j.cost), 0) || 0;
-        const expense = expenses.data?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
-
-        data.push({
+        dateMap.set(dateStr, {
           date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          revenue,
-          expense,
-          profit: revenue - expense,
+          revenue: 0,
+          expense: 0,
+          profit: 0,
         });
       }
+
+      // Aggregate jobs by date
+      jobs.data?.forEach(job => {
+        const entry = dateMap.get(job.completion_date);
+        if (entry) entry.revenue += Number(job.cost);
+      });
+
+      // Aggregate expenses by date
+      expenses.data?.forEach(expense => {
+        const entry = dateMap.get(expense.expense_date);
+        if (entry) entry.expense += Number(expense.amount);
+      });
+
+      // Calculate profit
+      const data = Array.from(dateMap.values()).map(entry => ({
+        ...entry,
+        profit: entry.revenue - entry.expense,
+      }));
 
       setChartData(data);
     } catch (error) {

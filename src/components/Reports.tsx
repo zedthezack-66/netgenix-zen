@@ -67,6 +67,11 @@ export const Reports = () => {
       doc.setFontSize(14);
       doc.text("Weekly Summary Report", 14, 32);
       
+      // Add watermark
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(8);
+      doc.text("System Powered by ZEDZACK TECH", pageWidth - 14, 37, { align: "right" });
+      
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
       doc.text(`Period: ${reportData.period}`, 14, 55);
@@ -186,6 +191,11 @@ export const Reports = () => {
       doc.setFontSize(14);
       doc.text("Monthly Summary Report", 14, 32);
       
+      // Add watermark
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(8);
+      doc.text("System Powered by ZEDZACK TECH", pageWidth - 14, 37, { align: "right" });
+      
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
       doc.text(`Period: ${reportData.period}`, 14, 55);
@@ -273,25 +283,25 @@ export const Reports = () => {
         .lte("completion_date", endDate)
         .eq("status", "completed");
 
-      const vatRate = 0.15; // 15% VAT
+      const vatRate = 0.16; // 16% VAT (inclusive)
       
       const jobsWithVAT = jobs?.map(j => {
-        const cost = Number(j.cost);
-        const vat = cost * vatRate;
-        const totalWithVAT = cost + vat;
-        return { ...j, cost, vat, totalWithVAT };
+        const totalWithVAT = Number(j.cost);
+        const netAmount = totalWithVAT / 1.16;
+        const vat = totalWithVAT - netAmount;
+        return { ...j, netAmount, vat, totalWithVAT };
       }) || [];
 
-      const totalSales = jobsWithVAT.reduce((sum, j) => sum + j.cost, 0);
+      const totalWithVAT = jobsWithVAT.reduce((sum, j) => sum + j.totalWithVAT, 0);
       const totalVAT = jobsWithVAT.reduce((sum, j) => sum + j.vat, 0);
-      const totalDue = totalSales + totalVAT;
+      const netSales = jobsWithVAT.reduce((sum, j) => sum + j.netAmount, 0);
 
       const reportData = {
         period: `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`,
-        total_sales: totalSales,
+        net_sales: netSales,
         vat_rate: vatRate,
         vat_amount: totalVAT,
-        total_due: totalDue,
+        total_with_vat: totalWithVAT,
         jobs_count: jobs?.length || 0,
       };
 
@@ -313,6 +323,11 @@ export const Reports = () => {
       doc.setFontSize(14);
       doc.text("Monthly VAT Report", 14, 32);
       
+      // Add watermark
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(8);
+      doc.text("System Powered by ZEDZACK TECH", pageWidth - 14, 37, { align: "right" });
+      
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
       doc.text(`Period: ${reportData.period}`, 14, 55);
@@ -324,10 +339,10 @@ export const Reports = () => {
         startY: 75,
         head: [["Description", "Amount"]],
         body: [
-          ["Total Sales (Excl. VAT)", `ZMW ${totalSales.toFixed(2)}`],
-          ["VAT Rate", `${(vatRate * 100).toFixed(0)}%`],
-          ["Total VAT Amount", `ZMW ${totalVAT.toFixed(2)}`],
-          ["Total Due (Incl. VAT)", `ZMW ${totalDue.toFixed(2)}`],
+          ["Total Amount (Incl. VAT)", `ZMW ${totalWithVAT.toFixed(2)}`],
+          ["VAT Rate (Inclusive)", `${(vatRate * 100).toFixed(0)}%`],
+          ["VAT Amount", `ZMW ${totalVAT.toFixed(2)}`],
+          ["Net Sales (Excl. VAT)", `ZMW ${netSales.toFixed(2)}`],
           ["Number of Jobs", reportData.jobs_count.toString()],
         ],
         theme: "grid",
@@ -340,18 +355,18 @@ export const Reports = () => {
         
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Date", "Client", "Job Type", "Amount (Excl. VAT)", "VAT (15%)", "Total (Incl. VAT)"]],
+          head: [["Date", "Client", "Job Type", "Total (Incl. VAT)", "VAT (16%)", "Net Amount"]],
           body: jobsWithVAT.map(j => [
             j.completion_date || "-",
             j.client_name,
             j.job_type,
-            `ZMW ${j.cost.toFixed(2)}`,
+            `ZMW ${j.totalWithVAT.toFixed(2)}`,
             `ZMW ${j.vat.toFixed(2)}`,
-            `ZMW ${j.totalWithVAT.toFixed(2)}`
+            `ZMW ${j.netAmount.toFixed(2)}`
           ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
-          foot: [["", "", "Totals:", `ZMW ${totalSales.toFixed(2)}`, `ZMW ${totalVAT.toFixed(2)}`, `ZMW ${totalDue.toFixed(2)}`]],
+          foot: [["", "", "Totals:", `ZMW ${totalWithVAT.toFixed(2)}`, `ZMW ${totalVAT.toFixed(2)}`, `ZMW ${netSales.toFixed(2)}`]],
           footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
         });
       }
