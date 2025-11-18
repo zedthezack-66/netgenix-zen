@@ -10,10 +10,11 @@ import { ExpensesManager } from "@/components/ExpensesManager";
 import { MaterialsManager } from "@/components/MaterialsManager";
 import { Reports } from "@/components/Reports";
 import { PerformanceCharts } from "@/components/PerformanceCharts";
-import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive } from "lucide-react";
+import { ReportHistory } from "@/components/ReportHistory";
+import { Settings } from "@/components/Settings";
+import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive, Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ReportHistory } from "@/components/ReportHistory";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -119,6 +120,10 @@ const Index = () => {
               <Archive className="h-4 w-4" />
               History
             </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <SettingsIcon className="h-4 w-4" />
+              Settings
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -145,8 +150,21 @@ const Index = () => {
           <TabsContent value="history">
             <ReportHistory />
           </TabsContent>
+
+          <TabsContent value="settings">
+            <Settings />
+          </TabsContent>
         </Tabs>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t bg-card/80 backdrop-blur-md py-4 mt-12 relative">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            System Powered by <span className="font-semibold text-primary">ZEDZACK TECH</span>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
