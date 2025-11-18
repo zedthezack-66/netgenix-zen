@@ -95,7 +95,7 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 relative">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid bg-card/50 backdrop-blur-sm">
+          <TabsList className="inline-flex w-full lg:w-auto overflow-x-auto bg-card/50 backdrop-blur-sm">
             <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
