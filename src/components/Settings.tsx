@@ -11,6 +11,7 @@ export const Settings = () => {
   const [businessName, setBusinessName] = useState("NetGenix");
   const [vatRate, setVatRate] = useState("16");
   const [stockThreshold, setStockThreshold] = useState("10");
+  const [tpin, setTpin] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = () => {
@@ -21,6 +22,7 @@ export const Settings = () => {
       businessName,
       vatRate: parseFloat(vatRate),
       stockThreshold: parseFloat(stockThreshold),
+      tpin,
     }));
 
     setTimeout(() => {
@@ -39,6 +41,7 @@ export const Settings = () => {
       setBusinessName(settings.businessName || "NetGenix");
       setVatRate(settings.vatRate?.toString() || "16");
       setStockThreshold(settings.stockThreshold?.toString() || "10");
+      setTpin(settings.tpin || "");
     }
   }, []);
 
@@ -104,6 +107,19 @@ export const Settings = () => {
                 Current: {vatRate}% (inclusive in job prices)
               </p>
             </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="tpin">Tax Registration Number (TPIN)</Label>
+              <Input
+                id="tpin"
+                value={tpin}
+                onChange={(e) => setTpin(e.target.value)}
+                placeholder="Enter TPIN"
+              />
+              <p className="text-xs text-muted-foreground">
+                This will appear on all VAT reports
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -156,6 +172,40 @@ export const Settings = () => {
             <div className="flex justify-between items-center py-2">
               <span className="text-sm text-muted-foreground">Currency</span>
               <span className="text-sm font-medium">ZMW</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/20 hover:shadow-lg transition-all duration-300 md:col-span-2">
+          <CardHeader>
+            <CardTitle>Legal & Compliance</CardTitle>
+            <CardDescription>Terms and conditions</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Terms & Conditions</h3>
+              <p className="text-sm text-muted-foreground">
+                By using this system, you agree to maintain accurate records, comply with local tax regulations, 
+                and ensure all financial data is kept confidential and secure. The system is provided for business 
+                management purposes only.
+              </p>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Legal Agreements</h3>
+              <p className="text-sm text-muted-foreground">
+                This software is licensed to the registered business entity. Unauthorized reproduction, distribution, 
+                or modification is prohibited. All generated reports must comply with Zambian Revenue Authority (ZRA) 
+                requirements for tax reporting and record keeping.
+              </p>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Data Protection</h3>
+              <p className="text-sm text-muted-foreground">
+                All business and financial data is stored securely. You are responsible for maintaining backup copies 
+                and ensuring compliance with applicable data protection regulations.
+              </p>
             </div>
           </CardContent>
         </Card>
