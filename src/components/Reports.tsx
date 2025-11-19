@@ -68,11 +68,19 @@ export const Reports = () => {
         low_stock_items: materials.length,
       };
 
-      await supabase.from("reports").insert({
+      // Save to database first
+      const { error: insertError } = await supabase.from("reports").insert({
         report_type: "weekly",
         report_date: endDateStr,
         report_data: reportData as any,
       });
+
+      if (insertError) {
+        console.error("Failed to save report to database:", insertError);
+        toast.error("Failed to save report to history", {
+          description: insertError.message,
+        });
+      }
 
       // Generate PDF
       const doc = new jsPDF();
@@ -200,11 +208,19 @@ export const Reports = () => {
         low_stock_items: materials.length,
       };
 
-      await supabase.from("reports").insert({
+      // Save to database first
+      const { error: insertError } = await supabase.from("reports").insert({
         report_type: "monthly",
         report_date: endDate,
         report_data: reportData as any,
       });
+
+      if (insertError) {
+        console.error("Failed to save report to database:", insertError);
+        toast.error("Failed to save report to history", {
+          description: insertError.message,
+        });
+      }
 
       // Generate PDF
       const doc = new jsPDF();
@@ -340,11 +356,19 @@ export const Reports = () => {
         jobs_count: jobs?.length || 0,
       };
 
-      await supabase.from("reports").insert({
+      // Save to database first
+      const { error: insertError } = await supabase.from("reports").insert({
         report_type: "vat",
         report_date: endDate,
         report_data: reportData as any,
       });
+
+      if (insertError) {
+        console.error("Failed to save report to database:", insertError);
+        toast.error("Failed to save report to history", {
+          description: insertError.message,
+        });
+      }
 
       // Generate PDF
       const doc = new jsPDF();
