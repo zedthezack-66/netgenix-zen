@@ -183,7 +183,7 @@ export const ExpensesManager = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="amount">Amount ($)</Label>
+                  <Label htmlFor="amount">Amount (ZMW)</Label>
                   <Input
                     id="amount"
                     type="number"
