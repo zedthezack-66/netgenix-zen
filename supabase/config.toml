@@ -1,1 +1,4 @@
 project_id = "mmonyowbkxzwcrwyjeuu"
+
+[functions.database-backup]
+verify_jwt = false
