@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import netgenixLogo from "@/assets/netgenix-logo.jpg";
 
 export const Reports = () => {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -17,6 +18,24 @@ export const Reports = () => {
     to: new Date(),
   });
   const [generating, setGenerating] = useState(false);
+
+  // Helper function to convert image to base64
+  const getImageBase64 = async (url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg'));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  };
 
   const generateWeeklyReport = async () => {
     setGenerating(true);
@@ -59,13 +78,21 @@ export const Reports = () => {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       
+      // Add logo
+      try {
+        const logoBase64 = await getImageBase64(netgenixLogo);
+        doc.addImage(logoBase64, 'JPEG', 14, 8, 24, 24);
+      } catch (error) {
+        console.error('Failed to load logo:', error);
+      }
+      
       doc.setFillColor(14, 165, 233);
       doc.rect(0, 0, pageWidth, 40, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
-      doc.text("NetGenix", 14, 20);
+      doc.text("NetGenix", 45, 20);
       doc.setFontSize(14);
-      doc.text("Weekly Summary Report", 14, 32);
+      doc.text("Weekly Summary Report", 45, 32);
       
       // Add watermark
       doc.setTextColor(200, 200, 200);
@@ -183,13 +210,21 @@ export const Reports = () => {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       
+      // Add logo
+      try {
+        const logoBase64 = await getImageBase64(netgenixLogo);
+        doc.addImage(logoBase64, 'JPEG', 14, 8, 24, 24);
+      } catch (error) {
+        console.error('Failed to load logo:', error);
+      }
+      
       doc.setFillColor(14, 165, 233);
       doc.rect(0, 0, pageWidth, 40, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
-      doc.text("NetGenix", 14, 20);
+      doc.text("NetGenix", 45, 20);
       doc.setFontSize(14);
-      doc.text("Monthly Summary Report", 14, 32);
+      doc.text("Monthly Summary Report", 45, 32);
       
       // Add watermark
       doc.setTextColor(200, 200, 200);
@@ -319,13 +354,21 @@ export const Reports = () => {
       const settings = JSON.parse(localStorage.getItem("netgenix_settings") || "{}");
       const tpin = settings.tpin || "Not Set";
       
+      // Add logo
+      try {
+        const logoBase64 = await getImageBase64(netgenixLogo);
+        doc.addImage(logoBase64, 'JPEG', 14, 8, 24, 24);
+      } catch (error) {
+        console.error('Failed to load logo:', error);
+      }
+      
       doc.setFillColor(14, 165, 233);
       doc.rect(0, 0, pageWidth, 40, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
-      doc.text("NetGenix", 14, 20);
+      doc.text("NetGenix", 45, 20);
       doc.setFontSize(14);
-      doc.text("Monthly VAT Report", 14, 32);
+      doc.text("Monthly VAT Report", 45, 32);
       
       // Add watermark
       doc.setTextColor(200, 200, 200);
