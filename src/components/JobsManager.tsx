@@ -483,7 +483,7 @@ export const JobsManager = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cost">Cost ($)</Label>
+                  <Label htmlFor="cost">Cost (ZMW)</Label>
                   <Input
                     id="cost"
                     type="number"

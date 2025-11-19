@@ -229,7 +229,7 @@ export const MaterialsManager = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cost_per_unit">Cost Per Unit ($)</Label>
+                  <Label htmlFor="cost_per_unit">Cost Per Unit (ZMW)</Label>
                   <Input
                     id="cost_per_unit"
                     type="number"
