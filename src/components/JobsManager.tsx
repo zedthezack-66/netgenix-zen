@@ -28,9 +28,84 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Check, ChevronsUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/alert-dialog-confirm";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+
+const JOB_TYPES = [
+  "Shirt Embroidery",
+  "Corporate Logo Embroidery",
+  "Name Embroidery",
+  "School Badge Embroidery",
+  "Cap Embroidery",
+  "3D Puff Embroidery",
+  "Patch Embroidery",
+  "Towel Embroidery",
+  "Jacket Embroidery",
+  "Bag Embroidery",
+  "T-shirt Printing",
+  "Hoodie Printing",
+  "Vinyl Heat Press Printing",
+  "Screen Printing",
+  "Direct-to-Garment (DTG) Printing",
+  "Jersey Number Printing",
+  "Reflective Printing",
+  "Apron Printing",
+  "Tote Bag Printing",
+  "Business Cards",
+  "Flyers",
+  "Posters",
+  "Brochures",
+  "Booklets",
+  "Stickers",
+  "Product Labels",
+  "Letterheads",
+  "Envelopes",
+  "NCR Receipt Books",
+  "Invoice Books",
+  "Delivery Note Books",
+  "Purchase Order Books",
+  "Notepads",
+  "Desk Calendars",
+  "Wall Calendars",
+  "Diaries",
+  "Presentation Folders",
+  "Branded Mugs",
+  "Branded Water Bottles",
+  "Branded Pens",
+  "Lanyards",
+  "Keyholders",
+  "Wristbands",
+  "Mousepads",
+  "Umbrellas",
+  "Caps",
+  "USB Flash Drives",
+  "PVC Banners",
+  "Roll-Up Banners",
+  "Teardrop Flags",
+  "Vinyl Stickers",
+  "Vehicle Branding",
+  "Shop Signage",
+  "Backdrop Banners",
+  "Mesh Banners",
+  "Window Graphics",
+  "Billboards",
+  "Custom Boxes",
+  "Paper Bags",
+  "Gift Bags",
+  "Clothing Tags",
+  "Food Packaging Stickers",
+  "Product Sleeves",
+  "Uniform Manufacturing",
+  "Custom Cap Manufacturing",
+  "Patch Production",
+  "Event Branding (Full Package)",
+  "Company Uniform Packages",
+  "School Uniform Branding",
+];
 
 interface Job {
   id: string;
@@ -53,6 +128,7 @@ export const JobsManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
   const [formData, setFormData] = useState({
     client_name: "",
     job_type: "",
@@ -245,15 +321,155 @@ export const JobsManager = () => {
                 </div>
                 <div>
                   <Label htmlFor="job_type">Job Type</Label>
-                  <Input
-                    id="job_type"
-                    value={formData.job_type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, job_type: e.target.value })
-                    }
-                    placeholder="e.g., T-shirt printing, Logo embroidery"
-                    required
-                  />
+                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={comboboxOpen}
+                        className="w-full justify-between"
+                      >
+                        {formData.job_type || "Select or type job type..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Search or type custom job type..." 
+                          value={formData.job_type}
+                          onValueChange={(value) => setFormData({ ...formData, job_type: value })}
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            <div className="py-2 px-2 text-sm">
+                              Press Enter to use "{formData.job_type}" as custom job type
+                            </div>
+                          </CommandEmpty>
+                          <CommandGroup heading="Embroidery Services">
+                            {JOB_TYPES.slice(0, 10).map((type) => (
+                              <CommandItem
+                                key={type}
+                                value={type}
+                                onSelect={(currentValue) => {
+                                  setFormData({ ...formData, job_type: currentValue });
+                                  setComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.job_type === type ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {type}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          <CommandGroup heading="Printing Services">
+                            {JOB_TYPES.slice(10, 19).map((type) => (
+                              <CommandItem
+                                key={type}
+                                value={type}
+                                onSelect={(currentValue) => {
+                                  setFormData({ ...formData, job_type: currentValue });
+                                  setComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.job_type === type ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {type}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          <CommandGroup heading="Corporate & Office">
+                            {JOB_TYPES.slice(19, 38).map((type) => (
+                              <CommandItem
+                                key={type}
+                                value={type}
+                                onSelect={(currentValue) => {
+                                  setFormData({ ...formData, job_type: currentValue });
+                                  setComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.job_type === type ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {type}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          <CommandGroup heading="Promotional Branding">
+                            {JOB_TYPES.slice(38, 47).map((type) => (
+                              <CommandItem
+                                key={type}
+                                value={type}
+                                onSelect={(currentValue) => {
+                                  setFormData({ ...formData, job_type: currentValue });
+                                  setComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.job_type === type ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {type}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          <CommandGroup heading="Signage & Large Format">
+                            {JOB_TYPES.slice(47, 57).map((type) => (
+                              <CommandItem
+                                key={type}
+                                value={type}
+                                onSelect={(currentValue) => {
+                                  setFormData({ ...formData, job_type: currentValue });
+                                  setComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.job_type === type ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {type}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          <CommandGroup heading="Packaging & Special Services">
+                            {JOB_TYPES.slice(57).map((type) => (
+                              <CommandItem
+                                key={type}
+                                value={type}
+                                onSelect={(currentValue) => {
+                                  setFormData({ ...formData, job_type: currentValue });
+                                  setComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.job_type === type ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {type}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="materials_used">Materials Used</Label>
