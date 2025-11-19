@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Check, ChevronsUpDown, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/alert-dialog-confirm";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -285,19 +286,44 @@ export const JobsManager = () => {
     );
   };
 
+  const exportToExcel = () => {
+    const exportData = filteredJobs.map(job => ({
+      "Job ID": job.id.substring(0, 8),
+      "Client Name": job.client_name,
+      "Job Type": job.job_type,
+      "Materials Used": job.materials_used || "N/A",
+      "Cost (ZMW)": job.cost,
+      "Status": job.status,
+      "Completion Date": job.completion_date || "N/A",
+      "Created At": new Date(job.created_at).toLocaleDateString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Jobs");
+    XLSX.writeFile(wb, `NetGenix_Jobs_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast.success("Jobs exported to Excel successfully!");
+  };
+
   return (
     <>
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">Jobs Management</CardTitle>
-            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Job
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={exportToExcel}>
+                <Download className="mr-2 h-4 w-4" />
+                Export to Excel
               </Button>
-            </DialogTrigger>
+              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Job
+                  </Button>
+                </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
@@ -524,14 +550,15 @@ export const JobsManager = () => {
                     }
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                 <Button type="submit" className="w-full">
                   {editingJob ? "Update Job" : "Create Job"}
                 </Button>
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      </CardHeader>
+            </div>
+          </div>
+        </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">

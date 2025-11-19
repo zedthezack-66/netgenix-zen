@@ -20,7 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -148,18 +149,40 @@ export const ExpensesManager = () => {
     setOpen(true);
   };
 
+  const exportToExcel = () => {
+    const exportData = expenses.map(expense => ({
+      "Date": new Date(expense.expense_date).toLocaleDateString(),
+      "Category": expense.category,
+      "Amount (ZMW)": expense.amount,
+      "Description": expense.description || "N/A",
+      "Created At": new Date(expense.created_at).toLocaleDateString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Expenses");
+    XLSX.writeFile(wb, `NetGenix_Expenses_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast.success("Expenses exported to Excel successfully!");
+  };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Expense Tracking</CardTitle>
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Expense
-              </Button>
-            </DialogTrigger>
+          <CardTitle className="text-2xl">Expenses Management</CardTitle>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportToExcel}>
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
+            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Expense
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
@@ -224,6 +247,7 @@ export const ExpensesManager = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

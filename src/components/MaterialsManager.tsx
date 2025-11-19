@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, AlertTriangle, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Material {
@@ -154,18 +155,42 @@ export const MaterialsManager = () => {
     return material.quantity < material.threshold;
   };
 
+  const exportToExcel = () => {
+    const exportData = materials.map(material => ({
+      "Material Name": material.name,
+      "Quantity": material.quantity,
+      "Unit": material.unit,
+      "Cost Per Unit (ZMW)": material.cost_per_unit,
+      "Threshold": material.threshold,
+      "Status": material.quantity < material.threshold ? "Low Stock" : "In Stock",
+      "Total Value (ZMW)": (material.quantity * material.cost_per_unit).toFixed(2)
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Materials");
+    XLSX.writeFile(wb, `NetGenix_Materials_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast.success("Materials exported to Excel successfully!");
+  };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Material Stock</CardTitle>
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Material
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportToExcel}>
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
+            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Material
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
@@ -247,6 +272,7 @@ export const MaterialsManager = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
