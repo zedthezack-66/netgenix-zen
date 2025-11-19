@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Printer } from "lucide-react";
+import netgenixLogo from "@/assets/netgenix-logo.jpg";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -72,8 +72,8 @@ const Auth = () => {
       <Card className="w-full max-w-md shadow-lg relative backdrop-blur-sm bg-card/95 border-border/50 hover:shadow-2xl transition-all duration-500 animate-slideUp">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 animate-pulse-glow">
-              <Printer className="h-8 w-8 text-primary-foreground" />
+            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary-glow p-1 shadow-lg hover:scale-110 transition-transform duration-300 animate-pulse-glow overflow-hidden">
+              <img src={netgenixLogo} alt="NetGenix Logo" className="h-full w-full object-cover rounded-full" />
             </div>
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
