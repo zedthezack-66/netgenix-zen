@@ -12,9 +12,10 @@ import { Reports } from "@/components/Reports";
 import { PerformanceCharts } from "@/components/PerformanceCharts";
 import { ReportHistory } from "@/components/ReportHistory";
 import { Settings } from "@/components/Settings";
-import { LogOut, Printer, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive, Settings as SettingsIcon } from "lucide-react";
+import { LogOut, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive, Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
+import netgenixLogo from "@/assets/netgenix-logo.jpg";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -73,8 +74,8 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center shadow-md">
-                <Printer className="h-6 w-6 text-primary-foreground" />
+              <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-primary to-primary-glow p-0.5 shadow-md overflow-hidden">
+                <img src={netgenixLogo} alt="NetGenix Logo" className="h-full w-full object-cover rounded-lg" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">NetGenix</h1>
