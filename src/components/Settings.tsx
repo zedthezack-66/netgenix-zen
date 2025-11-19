@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Percent, Package, Save } from "lucide-react";
+import { Building2, Percent, Package, Save, Database, Download } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Settings = () => {
   const [businessName, setBusinessName] = useState("NetGenix");
@@ -13,6 +14,7 @@ export const Settings = () => {
   const [stockThreshold, setStockThreshold] = useState("10");
   const [tpin, setTpin] = useState("");
   const [saving, setSaving] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
 
   const handleSave = () => {
     setSaving(true);
@@ -31,6 +33,40 @@ export const Settings = () => {
         description: "Your preferences have been updated successfully",
       });
     }, 500);
+  };
+
+  const handleBackup = async () => {
+    setBackingUp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('database-backup');
+      
+      if (error) throw error;
+
+      // Convert backup to downloadable JSON file
+      const backupBlob = new Blob([JSON.stringify(data.backup, null, 2)], { 
+        type: 'application/json' 
+      });
+      const url = URL.createObjectURL(backupBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `netgenix-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("💾 Backup Created!", {
+        description: "Database backup downloaded successfully",
+      });
+    } catch (error) {
+      console.error('Backup error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to create database backup";
+      toast.error("Backup Failed", {
+        description: errorMessage,
+      });
+    } finally {
+      setBackingUp(false);
+    }
   };
 
   useEffect(() => {
@@ -153,7 +189,44 @@ export const Settings = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-muted hover:shadow-lg transition-all duration-300">
+        <Card className="border-primary/20 hover:shadow-lg transition-all duration-300">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Database className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Database Backup</CardTitle>
+                <CardDescription>Create and download database backups</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Automated weekly backups run every Friday at 23:00. You can also create manual backups anytime.
+              </p>
+              <Button 
+                onClick={handleBackup} 
+                disabled={backingUp}
+                className="w-full"
+                variant="secondary"
+              >
+                {backingUp ? (
+                  <>Creating Backup...</>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Create Backup Now
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-muted hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <CardTitle>System Information</CardTitle>
             <CardDescription>Application details</CardDescription>
