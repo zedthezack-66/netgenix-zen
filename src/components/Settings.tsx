@@ -226,7 +226,8 @@ export const Settings = () => {
         </Card>
       </div>
 
-      <Card className="border-muted hover:shadow-lg transition-all duration-300">
+      <div className="space-y-6">
+        <Card className="border-muted hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <CardTitle>System Information</CardTitle>
             <CardDescription>Application details</CardDescription>
@@ -249,7 +250,7 @@ export const Settings = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 hover:shadow-lg transition-all duration-300 md:col-span-2">
+        <Card className="border-primary/20 hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <CardTitle>Legal & Compliance</CardTitle>
             <CardDescription>Terms and conditions</CardDescription>
