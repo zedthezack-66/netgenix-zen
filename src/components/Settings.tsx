@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Building2, Percent, Package, Save, Database, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ServiceAgreement } from "./ServiceAgreement";
 
 export const Settings = () => {
   const [businessName, setBusinessName] = useState("NetGenix");
@@ -250,6 +251,8 @@ export const Settings = () => {
           </CardContent>
         </Card>
 
+        <ServiceAgreement />
+        
         <Card className="border-primary/20 hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <CardTitle>Legal & Compliance</CardTitle>
