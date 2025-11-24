@@ -45,7 +45,7 @@ export const ServiceAgreement = () => {
       },
       {
         title: "5. MONTHLY SUBSCRIPTION FEES",
-        content: "User agrees to pay a monthly subscription fee of ZMW 20.00 (Twenty Zambian Kwacha) for online deployment and cloud storage services hosted on AWS infrastructure. This fee covers:\n• Cloud hosting and server maintenance\n• Database storage and backups\n• System uptime and availability\n• Cloud infrastructure costs\n\nPayment is due on the first day of each month. Failure to pay within 7 days may result in service suspension."
+        content: "User agrees to pay a monthly subscription fee of USD $20.00 (Twenty United States Dollars) for online deployment and cloud storage services hosted on AWS infrastructure. This fee covers:\n• Cloud hosting and server maintenance\n• Database storage and backups\n• System uptime and availability\n• Cloud infrastructure costs\n\nPayment is due on the first day of each month. Failure to pay within 7 days may result in service suspension."
       },
       {
         title: "6. MAINTENANCE AND SUPPORT",
@@ -160,7 +160,7 @@ export const ServiceAgreement = () => {
           <h3 className="font-semibold text-sm">Agreement Highlights:</h3>
           <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
             <li>One-time development fee: <span className="font-medium text-foreground">ZMW 3,000</span> for custom development and deployment</li>
-            <li>Monthly subscription: <span className="font-medium text-foreground">ZMW 20</span> for cloud hosting and storage</li>
+            <li>Monthly subscription: <span className="font-medium text-foreground">$20 USD</span> for cloud hosting and storage</li>
             <li><span className="font-medium text-foreground">Free maintenance</span> and technical support included</li>
             <li>Additional development features available at agreed costs</li>
             <li>30-day notice for termination with data export rights</li>
