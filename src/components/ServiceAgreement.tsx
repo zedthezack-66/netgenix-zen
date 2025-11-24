@@ -41,11 +41,11 @@ export const ServiceAgreement = () => {
       },
       {
         title: "4. ONE-TIME DEVELOPMENT FEE",
-        content: "User agrees to pay a one-time development and deployment fee of USD $3,000.00 (Three Thousand United States Dollars). This fee covers:\n• Custom system development and configuration\n• Initial deployment and setup\n• Data migration and system integration\n• User training and onboarding\n• Testing and quality assurance\n\nThis fee is due upon signing of this Agreement or as otherwise agreed in writing between the parties."
+        content: "User agrees to pay a one-time development and deployment fee of ZMW 3,000.00 (Three Thousand Zambian Kwacha). This fee covers:\n• Custom system development and configuration\n• Initial deployment and setup\n• Data migration and system integration\n• User training and onboarding\n• Testing and quality assurance\n\nThis fee is due upon signing of this Agreement or as otherwise agreed in writing between the parties."
       },
       {
         title: "5. MONTHLY SUBSCRIPTION FEES",
-        content: "User agrees to pay a monthly subscription fee of USD $20.00 (Twenty United States Dollars) for online deployment and cloud storage services hosted on AWS infrastructure. This fee covers:\n• Cloud hosting and server maintenance\n• Database storage and backups\n• System uptime and availability\n• Cloud infrastructure costs\n\nPayment is due on the first day of each month. Failure to pay within 7 days may result in service suspension."
+        content: "User agrees to pay a monthly subscription fee of ZMW 20.00 (Twenty Zambian Kwacha) for online deployment and cloud storage services hosted on AWS infrastructure. This fee covers:\n• Cloud hosting and server maintenance\n• Database storage and backups\n• System uptime and availability\n• Cloud infrastructure costs\n\nPayment is due on the first day of each month. Failure to pay within 7 days may result in service suspension."
       },
       {
         title: "6. MAINTENANCE AND SUPPORT",
@@ -159,8 +159,8 @@ export const ServiceAgreement = () => {
         <div className="rounded-lg border p-4 space-y-3">
           <h3 className="font-semibold text-sm">Agreement Highlights:</h3>
           <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
-            <li>One-time development fee: <span className="font-medium text-foreground">$3,000 USD</span> for custom development and deployment</li>
-            <li>Monthly subscription: <span className="font-medium text-foreground">$20 USD</span> for cloud hosting and storage</li>
+            <li>One-time development fee: <span className="font-medium text-foreground">ZMW 3,000</span> for custom development and deployment</li>
+            <li>Monthly subscription: <span className="font-medium text-foreground">ZMW 20</span> for cloud hosting and storage</li>
             <li><span className="font-medium text-foreground">Free maintenance</span> and technical support included</li>
             <li>Additional development features available at agreed costs</li>
             <li>30-day notice for termination with data export rights</li>
