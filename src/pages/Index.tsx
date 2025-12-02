@@ -8,11 +8,12 @@ import { Dashboard } from "@/components/Dashboard";
 import { JobsManager } from "@/components/JobsManager";
 import { ExpensesManager } from "@/components/ExpensesManager";
 import { MaterialsManager } from "@/components/MaterialsManager";
+import { MaterialRollsManager } from "@/components/MaterialRollsManager";
 import { Reports } from "@/components/Reports";
 import { PerformanceCharts } from "@/components/PerformanceCharts";
 import { ReportHistory } from "@/components/ReportHistory";
 import { Settings } from "@/components/Settings";
-import { LogOut, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive, Settings as SettingsIcon } from "lucide-react";
+import { LogOut, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive, Settings as SettingsIcon, ScrollText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import netgenixLogo from "@/assets/netgenix-logo.jpg";
@@ -113,6 +114,10 @@ const Index = () => {
               <Package className="h-4 w-4" />
               Materials
             </TabsTrigger>
+            <TabsTrigger value="rolls" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <ScrollText className="h-4 w-4" />
+              Rolls
+            </TabsTrigger>
             <TabsTrigger value="reports" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <FileText className="h-4 w-4" />
               Reports
@@ -142,6 +147,10 @@ const Index = () => {
 
           <TabsContent value="materials">
             <MaterialsManager />
+          </TabsContent>
+
+          <TabsContent value="rolls">
+            <MaterialRollsManager />
           </TabsContent>
 
           <TabsContent value="reports">
