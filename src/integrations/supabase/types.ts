@@ -63,8 +63,18 @@ export type Database = {
           created_at: string | null
           created_by: string
           id: string
+          job_height: number | null
+          job_quantity: number | null
           job_type: string
+          job_width: number | null
+          length_deducted: number | null
+          material_roll_id: string | null
           materials_used: string | null
+          payment_mode: string | null
+          payment_received: number | null
+          rate_per_sqm: number | null
+          received_by: string | null
+          sqm_used: number | null
           status: string | null
           updated_at: string | null
         }
@@ -75,8 +85,18 @@ export type Database = {
           created_at?: string | null
           created_by: string
           id?: string
+          job_height?: number | null
+          job_quantity?: number | null
           job_type: string
+          job_width?: number | null
+          length_deducted?: number | null
+          material_roll_id?: string | null
           materials_used?: string | null
+          payment_mode?: string | null
+          payment_received?: number | null
+          rate_per_sqm?: number | null
+          received_by?: string | null
+          sqm_used?: number | null
           status?: string | null
           updated_at?: string | null
         }
@@ -87,8 +107,18 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           id?: string
+          job_height?: number | null
+          job_quantity?: number | null
           job_type?: string
+          job_width?: number | null
+          length_deducted?: number | null
+          material_roll_id?: string | null
           materials_used?: string | null
+          payment_mode?: string | null
+          payment_received?: number | null
+          rate_per_sqm?: number | null
+          received_by?: string | null
+          sqm_used?: number | null
           status?: string | null
           updated_at?: string | null
         }
@@ -100,7 +130,59 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "jobs_material_roll_id_fkey"
+            columns: ["material_roll_id"]
+            isOneToOne: false
+            referencedRelation: "material_rolls"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      material_rolls: {
+        Row: {
+          alert_level: number
+          cost_per_sqm: number
+          created_at: string | null
+          created_by: string | null
+          id: string
+          initial_length: number
+          material_type: Database["public"]["Enums"]["material_type"]
+          remaining_length: number
+          roll_id: string
+          roll_width: number
+          selling_rate_per_sqm: number
+          updated_at: string | null
+        }
+        Insert: {
+          alert_level?: number
+          cost_per_sqm?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          initial_length: number
+          material_type: Database["public"]["Enums"]["material_type"]
+          remaining_length: number
+          roll_id: string
+          roll_width: number
+          selling_rate_per_sqm?: number
+          updated_at?: string | null
+        }
+        Update: {
+          alert_level?: number
+          cost_per_sqm?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          initial_length?: number
+          material_type?: Database["public"]["Enums"]["material_type"]
+          remaining_length?: number
+          roll_id?: string
+          roll_width?: number
+          selling_rate_per_sqm?: number
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       materials: {
         Row: {
@@ -191,7 +273,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      material_type: "Vinyl" | "PVC Banner" | "Banner Material" | "DTF"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -318,6 +400,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      material_type: ["Vinyl", "PVC Banner", "Banner Material", "DTF"],
+    },
   },
 } as const

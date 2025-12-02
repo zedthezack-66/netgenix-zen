@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FileText, Download, Calendar as CalendarIcon, FileSpreadsheet } from "lucide-react";
+import { FileText, Download, Calendar as CalendarIcon, FileSpreadsheet, ScrollText } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import netgenixLogo from "@/assets/netgenix-logo.jpg";
+import * as XLSX from "xlsx";
 
 export const Reports = () => {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -457,6 +458,216 @@ export const Reports = () => {
     }
   };
 
+  const generateMaterialUsageReport = async () => {
+    setGenerating(true);
+    try {
+      const startDate = format(dateRange.from, "yyyy-MM-dd");
+      const endDate = format(dateRange.to, "yyyy-MM-dd");
+
+      // Fetch material rolls
+      const { data: rolls } = await supabase.from("material_rolls").select("*");
+      
+      // Fetch jobs with material usage in date range
+      const { data: jobs } = await supabase
+        .from("jobs")
+        .select("*")
+        .gte("completion_date", startDate)
+        .lte("completion_date", endDate)
+        .not("material_roll_id", "is", null);
+
+      // Calculate usage per roll
+      const rollUsage = (rolls || []).map((roll: any) => {
+        const rollJobs = (jobs || []).filter((j: any) => j.material_roll_id === roll.id);
+        const sqmPrinted = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.sqm_used) || 0), 0);
+        const lengthUsed = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.length_deducted) || 0), 0);
+        const revenueGenerated = rollJobs.reduce((sum: number, j: any) => sum + Number(j.cost), 0);
+        const costConsumed = sqmPrinted * Number(roll.cost_per_sqm);
+        const isLowStock = Number(roll.remaining_length) <= Number(roll.alert_level);
+        
+        return {
+          ...roll,
+          sqmPrinted,
+          lengthUsed,
+          revenueGenerated,
+          costConsumed,
+          profit: revenueGenerated - costConsumed,
+          isLowStock,
+        };
+      });
+
+      const lowStockRolls = rollUsage.filter((r: any) => r.isLowStock);
+      const totalRevenue = rollUsage.reduce((sum: number, r: any) => sum + r.revenueGenerated, 0);
+      const totalCost = rollUsage.reduce((sum: number, r: any) => sum + r.costConsumed, 0);
+
+      // Save to database
+      const reportData = {
+        period: `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`,
+        total_revenue: totalRevenue,
+        total_cost: totalCost,
+        profit: totalRevenue - totalCost,
+        rolls_count: rolls?.length || 0,
+        low_stock_count: lowStockRolls.length,
+      };
+
+      await supabase.from("reports").insert({
+        report_type: "material_usage",
+        report_date: endDate,
+        report_data: reportData as any,
+      });
+
+      // Generate PDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      try {
+        const logoBase64 = await getImageBase64(netgenixLogo);
+        doc.addImage(logoBase64, 'JPEG', 14, 8, 24, 24);
+      } catch (error) {
+        console.error('Failed to load logo:', error);
+      }
+      
+      doc.setFillColor(14, 165, 233);
+      doc.rect(0, 0, pageWidth, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text("NetGenix", 45, 20);
+      doc.setFontSize(14);
+      doc.text("Material Usage Report", 45, 32);
+      
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(8);
+      doc.text("System Powered by ZEDZACK TECH", pageWidth - 14, 37, { align: "right" });
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.text(`Period: ${reportData.period}`, 14, 55);
+      
+      doc.setFontSize(16);
+      doc.text("Usage Summary", 14, 70);
+      
+      autoTable(doc, {
+        startY: 75,
+        head: [["Metric", "Value"]],
+        body: [
+          ["Total Rolls", (rolls?.length || 0).toString()],
+          ["Revenue from Materials", `ZMW ${totalRevenue.toFixed(2)}`],
+          ["Material Cost Consumed", `ZMW ${totalCost.toFixed(2)}`],
+          ["Net Profit", `ZMW ${(totalRevenue - totalCost).toFixed(2)}`],
+          ["Low Stock Rolls", lowStockRolls.length.toString()],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [14, 165, 233] },
+      });
+
+      if (rollUsage.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Roll Usage Details", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Roll ID", "Type", "SQM Used", "Length Used", "Remaining", "Revenue", "Cost", "Status"]],
+          body: rollUsage.map((r: any) => [
+            r.roll_id,
+            r.material_type,
+            r.sqmPrinted.toFixed(2),
+            `${r.lengthUsed.toFixed(2)}m`,
+            `${Number(r.remaining_length).toFixed(2)}m`,
+            `ZMW ${r.revenueGenerated.toFixed(2)}`,
+            `ZMW ${r.costConsumed.toFixed(2)}`,
+            r.isLowStock ? "LOW" : "OK"
+          ]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+          styles: { fontSize: 8 },
+        });
+      }
+
+      if (lowStockRolls.length > 0) {
+        doc.setFontSize(16);
+        doc.text("Low Stock Alert", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Roll ID", "Type", "Remaining", "Alert Level"]],
+          body: lowStockRolls.map((r: any) => [
+            r.roll_id,
+            r.material_type,
+            `${Number(r.remaining_length).toFixed(2)}m`,
+            `${Number(r.alert_level)}m`
+          ]),
+          theme: "striped",
+          headStyles: { fillColor: [239, 68, 68] },
+        });
+      }
+
+      doc.save(`NetGenix-Material-Usage-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
+
+      toast.success("📊 Material Usage Report Generated!", {
+        description: `PDF downloaded for period ${reportData.period}`,
+      });
+    } catch (error: any) {
+      toast.error("Failed to generate report", {
+        description: error.message,
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const exportMaterialUsageCSV = async () => {
+    setGenerating(true);
+    try {
+      const startDate = format(dateRange.from, "yyyy-MM-dd");
+      const endDate = format(dateRange.to, "yyyy-MM-dd");
+
+      const { data: rolls } = await supabase.from("material_rolls").select("*");
+      const { data: jobs } = await supabase
+        .from("jobs")
+        .select("*")
+        .gte("completion_date", startDate)
+        .lte("completion_date", endDate)
+        .not("material_roll_id", "is", null);
+
+      const rollUsage = (rolls || []).map((roll: any) => {
+        const rollJobs = (jobs || []).filter((j: any) => j.material_roll_id === roll.id);
+        const sqmPrinted = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.sqm_used) || 0), 0);
+        const lengthUsed = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.length_deducted) || 0), 0);
+        const revenueGenerated = rollJobs.reduce((sum: number, j: any) => sum + Number(j.cost), 0);
+        const costConsumed = sqmPrinted * Number(roll.cost_per_sqm);
+        
+        return {
+          "Roll ID": roll.roll_id,
+          "Material Type": roll.material_type,
+          "Roll Width (m)": roll.roll_width,
+          "Initial Length (m)": roll.initial_length,
+          "Remaining Length (m)": Number(roll.remaining_length).toFixed(2),
+          "SQM Printed": sqmPrinted.toFixed(2),
+          "Length Used (m)": lengthUsed.toFixed(2),
+          "Cost/SQM (ZMW)": roll.cost_per_sqm,
+          "Rate/SQM (ZMW)": roll.selling_rate_per_sqm,
+          "Material Cost (ZMW)": costConsumed.toFixed(2),
+          "Revenue (ZMW)": revenueGenerated.toFixed(2),
+          "Profit (ZMW)": (revenueGenerated - costConsumed).toFixed(2),
+          "Alert Level (m)": roll.alert_level,
+          "Status": Number(roll.remaining_length) <= Number(roll.alert_level) ? "LOW STOCK" : "OK",
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rollUsage);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Material Usage");
+      XLSX.writeFile(wb, `NetGenix-Material-Usage-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.xlsx`);
+
+      toast.success("📊 Material Usage CSV Exported!");
+    } catch (error: any) {
+      toast.error("Failed to export CSV", {
+        description: error.message,
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-slideUp">
       <div className="grid gap-6 md:grid-cols-3">
@@ -605,6 +816,79 @@ export const Reports = () => {
               <Download className="mr-2 h-4 w-4" />
               Generate VAT Report
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-success/20 hover:shadow-lg transition-all duration-300">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                <ScrollText className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <CardTitle>Material Usage Report</CardTitle>
+                <CardDescription>Roll usage and stock summary</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Date Range</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !dateRange && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "LLL dd")} -{" "}
+                          {format(dateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={{ from: dateRange.from, to: dateRange.to }}
+                    onSelect={(range: any) => range && setDateRange(range)}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={generateMaterialUsageReport} 
+                disabled={generating}
+                className="flex-1"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                PDF
+              </Button>
+              <Button 
+                onClick={exportMaterialUsageCSV} 
+                disabled={generating}
+                variant="outline"
+                className="flex-1"
+              >
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                CSV
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

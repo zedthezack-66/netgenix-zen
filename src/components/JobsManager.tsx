@@ -35,6 +35,7 @@ import { ConfirmDialog } from "@/components/ui/alert-dialog-confirm";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { MaterialJobForm } from "@/components/MaterialJobForm";
 
 const JOB_TYPES = [
   "Shirt Embroidery",
@@ -117,6 +118,9 @@ interface Job {
   status: string;
   completion_date: string | null;
   created_at: string;
+  sqm_used?: number;
+  length_deducted?: number;
+  material_roll_id?: string;
 }
 
 export const JobsManager = () => {
@@ -312,11 +316,12 @@ export const JobsManager = () => {
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">Jobs Management</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={exportToExcel}>
                 <Download className="mr-2 h-4 w-4" />
                 Export to Excel
               </Button>
+              <MaterialJobForm onJobCreated={fetchJobs} />
               <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
                 <DialogTrigger asChild>
                   <Button>
