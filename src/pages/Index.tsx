@@ -12,8 +12,9 @@ import { MaterialRollsManager } from "@/components/MaterialRollsManager";
 import { Reports } from "@/components/Reports";
 import { PerformanceCharts } from "@/components/PerformanceCharts";
 import { ReportHistory } from "@/components/ReportHistory";
+import { JobHistory } from "@/components/JobHistory";
 import { Settings } from "@/components/Settings";
-import { LogOut, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive, Settings as SettingsIcon, ScrollText } from "lucide-react";
+import { LogOut, LayoutDashboard, Briefcase, DollarSign, Package, FileText, Archive, Settings as SettingsIcon, ScrollText, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import netgenixLogo from "@/assets/netgenix-logo.jpg";
@@ -122,9 +123,13 @@ const Index = () => {
               <FileText className="h-4 w-4" />
               Reports
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="report-history" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Archive className="h-4 w-4" />
-              History
+              Report History
+            </TabsTrigger>
+            <TabsTrigger value="job-history" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <History className="h-4 w-4" />
+              Job History
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <SettingsIcon className="h-4 w-4" />
@@ -157,8 +162,12 @@ const Index = () => {
             <Reports />
           </TabsContent>
 
-          <TabsContent value="history">
+          <TabsContent value="report-history">
             <ReportHistory />
+          </TabsContent>
+
+          <TabsContent value="job-history">
+            <JobHistory />
           </TabsContent>
 
           <TabsContent value="settings">

@@ -23,7 +23,7 @@ import { Plus, Calculator } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const MATERIAL_TYPES = ["Vinyl", "PVC Banner", "Banner Material", "DTF"] as const;
-const PAYMENT_MODES = ["Cash", "Mobile Money", "Bank Transfer", "Cheque"] as const;
+const PAYMENT_MODES = ["Cash", "Mobile Money", "Credit"] as const;
 
 interface MaterialRoll {
   id: string;
@@ -148,14 +148,19 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
       return;
     }
 
+    // Check if payment is recorded to determine status
+    const paymentAmount = parseFloat(formData.payment_received) || 0;
+    const hasPayment = paymentAmount > 0 && formData.payment_mode && formData.received_by;
+    const jobStatus = hasPayment ? "completed" : "in_progress";
+
     try {
-      // Create the job
+      // Create the job - material deduction happens immediately
       const { error: jobError } = await supabase.from("jobs").insert({
         client_name: formData.client_name,
         job_type: formData.job_type || `${selectedRoll.material_type} Print`,
         cost: calculations.amount_due,
-        status: "completed",
-        completion_date: formData.completion_date || new Date().toISOString().split("T")[0],
+        status: jobStatus,
+        completion_date: hasPayment ? (formData.completion_date || new Date().toISOString().split("T")[0]) : null,
         created_by: user.id,
         material_roll_id: formData.roll_id,
         job_width: parseFloat(formData.job_width),
@@ -164,9 +169,10 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
         sqm_used: calculations.sqm_used,
         length_deducted: calculations.length_deducted,
         rate_per_sqm: parseFloat(formData.rate_per_sqm),
-        payment_received: parseFloat(formData.payment_received) || calculations.amount_due,
-        received_by: formData.received_by,
-        payment_mode: formData.payment_mode,
+        payment_received: paymentAmount,
+        received_by: formData.received_by || null,
+        payment_mode: formData.payment_mode || null,
+        payment_at: hasPayment ? new Date().toISOString() : null,
         materials_used: `${selectedRoll.roll_id} - ${calculations.sqm_used.toFixed(2)} sqm`,
       });
 
@@ -181,8 +187,8 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
 
       if (rollError) throw rollError;
 
-      toast.success("✨ Material job created!", {
-        description: `${calculations.sqm_used.toFixed(2)} SQM used, ZMW ${calculations.amount_due.toFixed(2)} billed`,
+      toast.success(hasPayment ? "✅ Material job completed!" : "🔄 Material job created (In Progress)", {
+        description: `${calculations.sqm_used.toFixed(2)} SQM used, ZMW ${calculations.amount_due.toFixed(2)} billed${!hasPayment ? " - Add payment to complete" : ""}`,
       });
 
       setOpen(false);
