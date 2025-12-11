@@ -32,7 +32,6 @@ interface MaterialRoll {
   roll_width: number;
   remaining_length: number;
   selling_rate_per_sqm: number;
-  cost_per_sqm: number;
 }
 
 interface MaterialJobFormProps {
@@ -62,7 +61,6 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
     sqm_used: 0,
     amount_due: 0,
     length_deducted: 0,
-    cost_consumed: 0,
   });
 
   useEffect(() => {
@@ -87,18 +85,15 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
 
     const selectedRoll = rolls.find(r => r.id === formData.roll_id);
     const rollWidth = selectedRoll?.roll_width || 1;
-    const costPerSqm = selectedRoll?.cost_per_sqm || 0;
 
     const sqm = width * height * quantity;
     const amount = sqm * rate;
     const lengthUsed = sqm / rollWidth;
-    const costConsumed = sqm * costPerSqm;
 
     setCalculations({
       sqm_used: sqm,
       amount_due: amount,
       length_deducted: lengthUsed,
-      cost_consumed: costConsumed,
     });
   }, [formData.job_width, formData.job_height, formData.job_quantity, formData.rate_per_sqm, formData.roll_id, rolls]);
 
@@ -106,7 +101,7 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
     try {
       const { data, error } = await supabase
         .from("material_rolls")
-        .select("id, roll_id, material_type, roll_width, remaining_length, selling_rate_per_sqm, cost_per_sqm")
+        .select("id, roll_id, material_type, roll_width, remaining_length, selling_rate_per_sqm")
         .gt("remaining_length", 0);
 
       if (error) throw error;
@@ -217,7 +212,7 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
       job_type: "",
       completion_date: "",
     });
-    setCalculations({ sqm_used: 0, amount_due: 0, length_deducted: 0, cost_consumed: 0 });
+    setCalculations({ sqm_used: 0, amount_due: 0, length_deducted: 0 });
   };
 
   return (
@@ -343,10 +338,6 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Length to Deduct:</span>
                   <span className="font-semibold">{calculations.length_deducted.toFixed(2)} m</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Material Cost:</span>
-                  <span className="font-semibold">ZMW {calculations.cost_consumed.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                   <span className="font-semibold">Amount Due:</span>
