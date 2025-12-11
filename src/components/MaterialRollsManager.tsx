@@ -44,7 +44,6 @@ interface MaterialRoll {
   roll_width: number;
   initial_length: number;
   remaining_length: number;
-  cost_per_sqm: number;
   selling_rate_per_sqm: number;
   alert_level: number;
   created_at: string;
@@ -62,7 +61,6 @@ export const MaterialRollsManager = () => {
     material_type: "Vinyl" as MaterialType,
     roll_width: "",
     initial_length: "",
-    cost_per_sqm: "",
     selling_rate_per_sqm: "",
     alert_level: "5",
   });
@@ -104,7 +102,6 @@ export const MaterialRollsManager = () => {
         remaining_length: editingRoll 
           ? editingRoll.remaining_length 
           : parseFloat(formData.initial_length),
-        cost_per_sqm: parseFloat(formData.cost_per_sqm),
         selling_rate_per_sqm: parseFloat(formData.selling_rate_per_sqm),
         alert_level: parseFloat(formData.alert_level),
       };
@@ -161,7 +158,6 @@ export const MaterialRollsManager = () => {
       material_type: "Vinyl",
       roll_width: "",
       initial_length: "",
-      cost_per_sqm: "",
       selling_rate_per_sqm: "",
       alert_level: "5",
     });
@@ -175,7 +171,6 @@ export const MaterialRollsManager = () => {
       material_type: roll.material_type,
       roll_width: roll.roll_width.toString(),
       initial_length: roll.initial_length.toString(),
-      cost_per_sqm: roll.cost_per_sqm.toString(),
       selling_rate_per_sqm: roll.selling_rate_per_sqm.toString(),
       alert_level: roll.alert_level.toString(),
     });
@@ -197,7 +192,6 @@ export const MaterialRollsManager = () => {
       "Initial Length (m)": roll.initial_length,
       "Remaining Length (m)": roll.remaining_length,
       "Remaining SQM": (roll.roll_width * roll.remaining_length).toFixed(2),
-      "Cost per SQM (ZMW)": roll.cost_per_sqm,
       "Selling Rate per SQM (ZMW)": roll.selling_rate_per_sqm,
       "Alert Level (m)": roll.alert_level,
       "Status": isLowStock(roll) ? "LOW STOCK" : "OK",
@@ -296,29 +290,16 @@ export const MaterialRollsManager = () => {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="cost_per_sqm">Cost/SQM (ZMW)</Label>
-                        <Input
-                          id="cost_per_sqm"
-                          type="number"
-                          step="0.01"
-                          value={formData.cost_per_sqm}
-                          onChange={(e) => setFormData({ ...formData, cost_per_sqm: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="selling_rate_per_sqm">Rate/SQM (ZMW)</Label>
-                        <Input
-                          id="selling_rate_per_sqm"
-                          type="number"
-                          step="0.01"
-                          value={formData.selling_rate_per_sqm}
-                          onChange={(e) => setFormData({ ...formData, selling_rate_per_sqm: e.target.value })}
-                          required
-                        />
-                      </div>
+                    <div>
+                      <Label htmlFor="selling_rate_per_sqm">Selling Rate/SQM (ZMW)</Label>
+                      <Input
+                        id="selling_rate_per_sqm"
+                        type="number"
+                        step="0.01"
+                        value={formData.selling_rate_per_sqm}
+                        onChange={(e) => setFormData({ ...formData, selling_rate_per_sqm: e.target.value })}
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="alert_level">Alert Level (m)</Label>
