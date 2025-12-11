@@ -70,6 +70,7 @@ export type Database = {
           length_deducted: number | null
           material_roll_id: string | null
           materials_used: string | null
+          payment_at: string | null
           payment_mode: string | null
           payment_received: number | null
           rate_per_sqm: number | null
@@ -92,6 +93,7 @@ export type Database = {
           length_deducted?: number | null
           material_roll_id?: string | null
           materials_used?: string | null
+          payment_at?: string | null
           payment_mode?: string | null
           payment_received?: number | null
           rate_per_sqm?: number | null
@@ -114,6 +116,7 @@ export type Database = {
           length_deducted?: number | null
           material_roll_id?: string | null
           materials_used?: string | null
+          payment_at?: string | null
           payment_mode?: string | null
           payment_received?: number | null
           rate_per_sqm?: number | null

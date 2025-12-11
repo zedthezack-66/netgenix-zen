@@ -109,6 +109,8 @@ const JOB_TYPES = [
   "School Uniform Branding",
 ];
 
+const PAYMENT_MODES = ["Cash", "Mobile Money", "Credit"] as const;
+
 interface Job {
   id: string;
   client_name: string;
@@ -121,6 +123,10 @@ interface Job {
   sqm_used?: number;
   length_deducted?: number;
   material_roll_id?: string;
+  payment_received?: number;
+  payment_mode?: string;
+  received_by?: string;
+  payment_at?: string;
 }
 
 export const JobsManager = () => {
@@ -139,8 +145,11 @@ export const JobsManager = () => {
     job_type: "",
     materials_used: "",
     cost: "",
-    status: "pending",
+    status: "in_progress",
     completion_date: "",
+    payment_received: "",
+    payment_mode: "",
+    received_by: "",
   });
 
   useEffect(() => {
@@ -167,9 +176,11 @@ export const JobsManager = () => {
 
   const fetchJobs = async () => {
     try {
+      // Only fetch non-completed jobs for active job management
       const { data, error } = await supabase
         .from("jobs")
         .select("*")
+        .neq("status", "completed")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -189,30 +200,48 @@ export const JobsManager = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Block completion if no payment recorded
+    const paymentAmount = parseFloat(formData.payment_received) || 0;
+    if (formData.status === "completed" && paymentAmount <= 0) {
+      toast.error("Cannot mark as Completed", {
+        description: "Payment must be recorded before completing a job",
+      });
+      return;
+    }
+
     try {
+      const jobData = {
+        client_name: formData.client_name,
+        job_type: formData.job_type,
+        materials_used: formData.materials_used,
+        cost: parseFloat(formData.cost),
+        status: formData.status,
+        completion_date: formData.status === "completed" ? (formData.completion_date || new Date().toISOString().split("T")[0]) : formData.completion_date || null,
+        payment_received: paymentAmount,
+        payment_mode: formData.payment_mode || null,
+        received_by: formData.received_by || null,
+        payment_at: formData.status === "completed" && paymentAmount > 0 ? new Date().toISOString() : null,
+      };
+
       if (editingJob) {
         const { error } = await supabase
           .from("jobs")
-          .update({
-            ...formData,
-            cost: parseFloat(formData.cost),
-          })
+          .update(jobData)
           .eq("id", editingJob.id);
 
         if (error) throw error;
-        toast.success("✅ Job updated successfully!", {
+        toast.success(formData.status === "completed" ? "✅ Job completed!" : "✅ Job updated!", {
           description: `${formData.client_name} - ${formData.job_type}`,
         });
       } else {
         const { error } = await supabase.from("jobs").insert({
-          ...formData,
-          cost: parseFloat(formData.cost),
+          ...jobData,
           created_by: user.id,
         });
 
         if (error) throw error;
-        toast.success("✨ Job created successfully!", {
-          description: `${formData.client_name} - ${formData.job_type}`,
+        toast.success("✨ Job created!", {
+          description: `${formData.client_name} - ${formData.job_type} (In Progress)`,
         });
       }
 
@@ -257,8 +286,11 @@ export const JobsManager = () => {
       job_type: "",
       materials_used: "",
       cost: "",
-      status: "pending",
+      status: "in_progress",
       completion_date: "",
+      payment_received: "",
+      payment_mode: "",
+      received_by: "",
     });
     setEditingJob(null);
   };
@@ -272,6 +304,9 @@ export const JobsManager = () => {
       cost: job.cost.toString(),
       status: job.status,
       completion_date: job.completion_date || "",
+      payment_received: (job.payment_received || "").toString(),
+      payment_mode: job.payment_mode || "",
+      received_by: job.received_by || "",
     });
     setOpen(true);
   };
@@ -530,9 +565,16 @@ export const JobsManager = () => {
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value) =>
+                    onValueChange={(value) => {
+                      // Block changing to completed if no payment
+                      if (value === "completed" && (!formData.payment_received || parseFloat(formData.payment_received) <= 0)) {
+                        toast.error("Payment required", {
+                          description: "Record payment before marking as Completed",
+                        });
+                        return;
+                      }
                       setFormData({ ...formData, status: value })
-                    }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -543,7 +585,56 @@ export const JobsManager = () => {
                       <SelectItem value="completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formData.status !== "completed" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Payment must be recorded to complete
+                    </p>
+                  )}
                 </div>
+                
+                {/* Payment Section */}
+                <div className="border-t pt-4 mt-4">
+                  <Label className="text-sm font-medium mb-3 block">Payment Details</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="payment_received" className="text-xs">Amount (ZMW)</Label>
+                      <Input
+                        id="payment_received"
+                        type="number"
+                        step="0.01"
+                        value={formData.payment_received}
+                        onChange={(e) => setFormData({ ...formData, payment_received: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="payment_mode" className="text-xs">Method</Label>
+                      <Select
+                        value={formData.payment_mode}
+                        onValueChange={(value) => setFormData({ ...formData, payment_mode: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_MODES.map((mode) => (
+                            <SelectItem key={mode} value={mode}>{mode}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <Label htmlFor="received_by" className="text-xs">Received By</Label>
+                    <Input
+                      id="received_by"
+                      value={formData.received_by}
+                      onChange={(e) => setFormData({ ...formData, received_by: e.target.value })}
+                      placeholder="Name"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="completion_date">Completion Date</Label>
                   <Input
@@ -580,13 +671,15 @@ export const JobsManager = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="all">All Active</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Completed jobs automatically move to Job History tab
+        </p>
         <Table>
           <TableHeader>
             <TableRow>
