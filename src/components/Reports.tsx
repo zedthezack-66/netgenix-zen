@@ -133,12 +133,20 @@ export const Reports = () => {
         doc.setFontSize(16);
         doc.text("Completed Jobs", 14, (doc as any).lastAutoTable.finalY + 15);
         
+        const jobsTotal = jobs.data.reduce((sum, j) => sum + Number(j.cost), 0);
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Client", "Job Type", "Cost"]],
-          body: jobs.data.map(j => [j.client_name, j.job_type, `ZMW ${Number(j.cost).toFixed(2)}`]),
+          head: [["Date", "Client", "Job Type", "Cost"]],
+          body: jobs.data.map(j => [
+            j.completion_date || "-",
+            j.client_name, 
+            j.job_type, 
+            `ZMW ${Number(j.cost).toFixed(2)}`
+          ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
+          foot: [["", "", "Total:", `ZMW ${jobsTotal.toFixed(2)}`]],
+          footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
         });
       }
 
@@ -146,12 +154,20 @@ export const Reports = () => {
         doc.setFontSize(16);
         doc.text("Expenses", 14, (doc as any).lastAutoTable.finalY + 15);
         
+        const expensesListTotal = expenses.data.reduce((sum, e) => sum + Number(e.amount), 0);
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Category", "Description", "Amount"]],
-          body: expenses.data.map(e => [e.category, e.description || "-", `ZMW ${Number(e.amount).toFixed(2)}`]),
+          head: [["Date", "Category", "Description", "Amount"]],
+          body: expenses.data.map(e => [
+            e.expense_date || "-",
+            e.category, 
+            e.description || "-", 
+            `ZMW ${Number(e.amount).toFixed(2)}`
+          ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
+          foot: [["", "", "Total:", `ZMW ${expensesListTotal.toFixed(2)}`]],
+          footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
         });
       }
 
@@ -273,12 +289,20 @@ export const Reports = () => {
         doc.setFontSize(16);
         doc.text("Completed Jobs", 14, (doc as any).lastAutoTable.finalY + 15);
         
+        const jobsTotal = jobs.data.reduce((sum, j) => sum + Number(j.cost), 0);
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Client", "Job Type", "Cost"]],
-          body: jobs.data.map(j => [j.client_name, j.job_type, `ZMW ${Number(j.cost).toFixed(2)}`]),
+          head: [["Date", "Client", "Job Type", "Cost"]],
+          body: jobs.data.map(j => [
+            j.completion_date || "-",
+            j.client_name, 
+            j.job_type, 
+            `ZMW ${Number(j.cost).toFixed(2)}`
+          ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
+          foot: [["", "", "Total:", `ZMW ${jobsTotal.toFixed(2)}`]],
+          footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
         });
       }
 
@@ -286,12 +310,20 @@ export const Reports = () => {
         doc.setFontSize(16);
         doc.text("Expenses", 14, (doc as any).lastAutoTable.finalY + 15);
         
+        const expensesListTotal = expenses.data.reduce((sum, e) => sum + Number(e.amount), 0);
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Category", "Description", "Amount"]],
-          body: expenses.data.map(e => [e.category, e.description || "-", `ZMW ${Number(e.amount).toFixed(2)}`]),
+          head: [["Date", "Category", "Description", "Amount"]],
+          body: expenses.data.map(e => [
+            e.expense_date || "-",
+            e.category, 
+            e.description || "-", 
+            `ZMW ${Number(e.amount).toFixed(2)}`
+          ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
+          foot: [["", "", "Total:", `ZMW ${expensesListTotal.toFixed(2)}`]],
+          footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
         });
       }
 
@@ -563,6 +595,9 @@ export const Reports = () => {
         doc.setFontSize(16);
         doc.text("Roll Usage Details", 14, (doc as any).lastAutoTable.finalY + 15);
         
+        const totalSqmUsed = rollUsage.reduce((sum: number, r: any) => sum + r.sqmPrinted, 0);
+        const totalLengthUsed = rollUsage.reduce((sum: number, r: any) => sum + r.lengthUsed, 0);
+        
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
           head: [["Roll ID", "Type", "SQM Used", "Length Used", "Remaining", "Revenue", "Cost", "Status"]],
@@ -579,6 +614,8 @@ export const Reports = () => {
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
           styles: { fontSize: 8 },
+          foot: [["", "Totals:", totalSqmUsed.toFixed(2), `${totalLengthUsed.toFixed(2)}m`, "", `ZMW ${totalRevenue.toFixed(2)}`, `ZMW ${totalCost.toFixed(2)}`, ""]],
+          footStyles: { fillColor: [14, 165, 233], fontStyle: "bold", fontSize: 8 },
         });
       }
 
