@@ -665,6 +665,7 @@ export const Reports = () => {
         .lte("completion_date", endDate)
         .not("material_roll_id", "is", null);
 
+      // Roll Summary Sheet
       const rollUsage = (rolls || []).map((roll: any) => {
         const rollJobs = (jobs || []).filter((j: any) => j.material_roll_id === roll.id);
         const sqmPrinted = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.sqm_used) || 0), 0);
@@ -680,19 +681,48 @@ export const Reports = () => {
           "Remaining Length (m)": Number(roll.remaining_length).toFixed(2),
           "SQM Printed": sqmPrinted.toFixed(2),
           "Length Used (m)": lengthUsed.toFixed(2),
-          "Cost/SQM (ZMW)": roll.cost_per_sqm,
           "Rate/SQM (ZMW)": roll.selling_rate_per_sqm,
-          "Material Cost (ZMW)": costConsumed.toFixed(2),
           "Revenue (ZMW)": revenueGenerated.toFixed(2),
-          "Profit (ZMW)": (revenueGenerated - costConsumed).toFixed(2),
           "Alert Level (m)": roll.alert_level,
           "Status": Number(roll.remaining_length) <= Number(roll.alert_level) ? "LOW STOCK" : "OK",
         };
       });
 
-      const ws = XLSX.utils.json_to_sheet(rollUsage);
+      // Individual Jobs Sheet with dates
+      const jobsData = (jobs || []).map((job: any) => {
+        const roll = (rolls || []).find((r: any) => r.id === job.material_roll_id);
+        return {
+          "Date": job.completion_date || job.created_at?.split('T')[0] || "-",
+          "Client": job.client_name,
+          "Job Type": job.job_type,
+          "Roll ID": roll?.roll_id || "-",
+          "Material Type": roll?.material_type || "-",
+          "SQM Used": Number(job.sqm_used || 0).toFixed(2),
+          "Length Used (m)": Number(job.length_deducted || 0).toFixed(2),
+          "Cost (ZMW)": Number(job.cost).toFixed(2),
+        };
+      });
+
+      // Add totals row to jobs
+      const totalSqm = (jobs || []).reduce((sum: number, j: any) => sum + Number(j.sqm_used || 0), 0);
+      const totalLength = (jobs || []).reduce((sum: number, j: any) => sum + Number(j.length_deducted || 0), 0);
+      const totalRevenue = (jobs || []).reduce((sum: number, j: any) => sum + Number(j.cost), 0);
+      jobsData.push({
+        "Date": "",
+        "Client": "",
+        "Job Type": "",
+        "Roll ID": "",
+        "Material Type": "TOTALS:",
+        "SQM Used": totalSqm.toFixed(2),
+        "Length Used (m)": totalLength.toFixed(2),
+        "Cost (ZMW)": totalRevenue.toFixed(2),
+      });
+
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Material Usage");
+      const wsSummary = XLSX.utils.json_to_sheet(rollUsage);
+      const wsJobs = XLSX.utils.json_to_sheet(jobsData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Roll Summary");
+      XLSX.utils.book_append_sheet(wb, wsJobs, "Job Details");
       XLSX.writeFile(wb, `NetGenix-Material-Usage-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.xlsx`);
 
       toast.success("📊 Material Usage CSV Exported!");
