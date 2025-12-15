@@ -94,10 +94,13 @@ export const MaterialRollsManager = () => {
     if (!user) return;
 
     try {
+      // Default width to 1m if not provided (especially for DTF)
+      const width = formData.roll_width ? parseFloat(formData.roll_width) : 1;
+      
       const rollData = {
         roll_id: formData.roll_id,
         material_type: formData.material_type,
-        roll_width: parseFloat(formData.roll_width),
+        roll_width: width,
         initial_length: parseFloat(formData.initial_length),
         remaining_length: editingRoll 
           ? editingRoll.remaining_length 
@@ -266,15 +269,14 @@ export const MaterialRollsManager = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="roll_width">Width (m)</Label>
+                        <Label htmlFor="roll_width">Width (m) <span className="text-muted-foreground text-xs">(optional)</span></Label>
                         <Input
                           id="roll_width"
                           type="number"
                           step="0.01"
                           value={formData.roll_width}
                           onChange={(e) => setFormData({ ...formData, roll_width: e.target.value })}
-                          placeholder="1.22"
-                          required
+                          placeholder="1 (default)"
                         />
                       </div>
                       <div>
