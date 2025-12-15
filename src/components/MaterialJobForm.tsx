@@ -84,18 +84,35 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
     const rate = parseFloat(formData.rate_per_sqm) || 0;
 
     const selectedRoll = rolls.find(r => r.id === formData.roll_id);
-    const rollWidth = selectedRoll?.roll_width || 1;
+    const materialType = selectedRoll?.material_type || formData.material_type;
 
-    const sqm = width * height * quantity;
-    const amount = sqm * rate;
-    const lengthUsed = sqm / rollWidth;
+    let sqm = 0;
+    let amount = 0;
+    let lengthUsed = 0;
+
+    if (materialType === "DTF") {
+      // DTF: Fixed 1m width, pricing based on length only
+      // Amount = Length (height) × Rate
+      // Stock deduction = Length used (height × quantity)
+      sqm = 0; // DTF doesn't use SQM
+      lengthUsed = height * quantity;
+      amount = lengthUsed * rate;
+    } else {
+      // Vinyl, PVC Banner, Banner Material: SQM-based pricing
+      // SQM = Width × Height × Quantity
+      // Amount = SQM × Rate
+      // Stock deduction = SQM used (deduct directly from remaining length)
+      sqm = width * height * quantity;
+      amount = sqm * rate;
+      lengthUsed = sqm; // Deduct SQM directly from remaining length
+    }
 
     setCalculations({
       sqm_used: sqm,
       amount_due: amount,
       length_deducted: lengthUsed,
     });
-  }, [formData.job_width, formData.job_height, formData.job_quantity, formData.rate_per_sqm, formData.roll_id, rolls]);
+  }, [formData.job_width, formData.job_height, formData.job_quantity, formData.rate_per_sqm, formData.roll_id, formData.material_type, rolls]);
 
   const fetchRolls = async () => {
     try {
@@ -158,7 +175,7 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
         completion_date: hasPayment ? (formData.completion_date || new Date().toISOString().split("T")[0]) : null,
         created_by: user.id,
         material_roll_id: formData.roll_id,
-        job_width: parseFloat(formData.job_width),
+        job_width: selectedRoll.material_type === "DTF" ? 1 : parseFloat(formData.job_width),
         job_height: parseFloat(formData.job_height),
         job_quantity: parseInt(formData.job_quantity),
         sqm_used: calculations.sqm_used,
@@ -168,7 +185,9 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
         received_by: formData.received_by || null,
         payment_mode: formData.payment_mode || null,
         payment_at: hasPayment ? new Date().toISOString() : null,
-        materials_used: `${selectedRoll.roll_id} - ${calculations.sqm_used.toFixed(2)} sqm`,
+        materials_used: selectedRoll.material_type === "DTF" 
+          ? `${selectedRoll.roll_id} - ${calculations.length_deducted.toFixed(2)} m`
+          : `${selectedRoll.roll_id} - ${calculations.sqm_used.toFixed(2)} sqm`,
       });
 
       if (jobError) throw jobError;
@@ -182,8 +201,12 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
 
       if (rollError) throw rollError;
 
+      const usageDescription = selectedRoll.material_type === "DTF"
+        ? `${calculations.length_deducted.toFixed(2)}m used`
+        : `${calculations.sqm_used.toFixed(2)} SQM used`;
+      
       toast.success(hasPayment ? "✅ Material job completed!" : "🔄 Material job created (In Progress)", {
-        description: `${calculations.sqm_used.toFixed(2)} SQM used, ZMW ${calculations.amount_due.toFixed(2)} billed${!hasPayment ? " - Add payment to complete" : ""}`,
+        description: `${usageDescription}, ZMW ${calculations.amount_due.toFixed(2)} billed${!hasPayment ? " - Add payment to complete" : ""}`,
       });
 
       setOpen(false);
@@ -279,44 +302,77 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="job_width">Width (m)</Label>
-              <Input
-                id="job_width"
-                type="number"
-                step="0.01"
-                value={formData.job_width}
-                onChange={(e) => setFormData({ ...formData, job_width: e.target.value })}
-                required
-              />
+          {formData.material_type === "DTF" ? (
+            // DTF: Only show Length and Quantity (fixed 1m width)
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="job_height">Length (m)</Label>
+                <Input
+                  id="job_height"
+                  type="number"
+                  step="0.01"
+                  value={formData.job_height}
+                  onChange={(e) => setFormData({ ...formData, job_height: e.target.value })}
+                  required
+                  placeholder="Enter length in meters"
+                />
+                <p className="text-xs text-muted-foreground mt-1">DTF has fixed 1m width</p>
+              </div>
+              <div>
+                <Label htmlFor="job_quantity">Qty</Label>
+                <Input
+                  id="job_quantity"
+                  type="number"
+                  min="1"
+                  value={formData.job_quantity}
+                  onChange={(e) => setFormData({ ...formData, job_quantity: e.target.value })}
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="job_height">Height (m)</Label>
-              <Input
-                id="job_height"
-                type="number"
-                step="0.01"
-                value={formData.job_height}
-                onChange={(e) => setFormData({ ...formData, job_height: e.target.value })}
-                required
-              />
+          ) : (
+            // Vinyl, PVC, Banner: Show Width, Height, Quantity
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="job_width">Width (m)</Label>
+                <Input
+                  id="job_width"
+                  type="number"
+                  step="0.01"
+                  value={formData.job_width}
+                  onChange={(e) => setFormData({ ...formData, job_width: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="job_height">Height (m)</Label>
+                <Input
+                  id="job_height"
+                  type="number"
+                  step="0.01"
+                  value={formData.job_height}
+                  onChange={(e) => setFormData({ ...formData, job_height: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="job_quantity">Qty</Label>
+                <Input
+                  id="job_quantity"
+                  type="number"
+                  min="1"
+                  value={formData.job_quantity}
+                  onChange={(e) => setFormData({ ...formData, job_quantity: e.target.value })}
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="job_quantity">Qty</Label>
-              <Input
-                id="job_quantity"
-                type="number"
-                min="1"
-                value={formData.job_quantity}
-                onChange={(e) => setFormData({ ...formData, job_quantity: e.target.value })}
-                required
-              />
-            </div>
-          </div>
+          )}
 
           <div>
-            <Label htmlFor="rate_per_sqm">Rate per SQM (ZMW)</Label>
+            <Label htmlFor="rate_per_sqm">
+              {formData.material_type === "DTF" ? "Rate per Meter (ZMW)" : "Rate per SQM (ZMW)"}
+            </Label>
             <Input
               id="rate_per_sqm"
               type="number"
@@ -328,17 +384,28 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
           </div>
 
           {/* Auto Calculations Display */}
-          {calculations.sqm_used > 0 && (
+          {(calculations.amount_due > 0 || calculations.length_deducted > 0) && (
             <Card className="bg-primary/5 border-primary/20">
               <CardContent className="pt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">SQM Used:</span>
-                  <span className="font-semibold">{calculations.sqm_used.toFixed(2)} sqm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Length to Deduct:</span>
-                  <span className="font-semibold">{calculations.length_deducted.toFixed(2)} m</span>
-                </div>
+                {formData.material_type === "DTF" ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Length Used:</span>
+                      <span className="font-semibold">{calculations.length_deducted.toFixed(2)} m</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">SQM Used:</span>
+                      <span className="font-semibold">{calculations.sqm_used.toFixed(2)} sqm</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Stock Deduction:</span>
+                      <span className="font-semibold">{calculations.length_deducted.toFixed(2)} sqm</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between border-t pt-2">
                   <span className="font-semibold">Amount Due:</span>
                   <span className="font-bold text-primary">ZMW {calculations.amount_due.toFixed(2)}</span>
