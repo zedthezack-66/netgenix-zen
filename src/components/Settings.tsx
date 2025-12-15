@@ -11,7 +11,6 @@ import { ServiceAgreement } from "./ServiceAgreement";
 
 export const Settings = () => {
   const [businessName, setBusinessName] = useState("NetGenix");
-  const [vatRate, setVatRate] = useState("16");
   const [stockThreshold, setStockThreshold] = useState("10");
   const [tpin, setTpin] = useState("");
   const [saving, setSaving] = useState(false);
@@ -23,7 +22,7 @@ export const Settings = () => {
     // Simulate save to localStorage
     localStorage.setItem("netgenix_settings", JSON.stringify({
       businessName,
-      vatRate: parseFloat(vatRate),
+      turnoverTaxRate: 5, // Fixed 5% turnover tax
       stockThreshold: parseFloat(stockThreshold),
       tpin,
     }));
@@ -76,7 +75,6 @@ export const Settings = () => {
     if (saved) {
       const settings = JSON.parse(saved);
       setBusinessName(settings.businessName || "NetGenix");
-      setVatRate(settings.vatRate?.toString() || "16");
       setStockThreshold(settings.stockThreshold?.toString() || "10");
       setTpin(settings.tpin || "");
     }
@@ -123,25 +121,21 @@ export const Settings = () => {
               </div>
               <div>
                 <CardTitle>Tax Configuration</CardTitle>
-                <CardDescription>VAT and tax settings</CardDescription>
+                <CardDescription>Turnover Tax settings</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="vatRate">VAT Rate (%)</Label>
-              <Input
-                id="vatRate"
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={vatRate}
-                onChange={(e) => setVatRate(e.target.value)}
-                placeholder="Enter VAT rate"
-              />
+              <Label>Turnover Tax Rate</Label>
+              <div className="p-3 bg-muted/50 rounded-md">
+                <p className="text-lg font-semibold">5%</p>
+                <p className="text-xs text-muted-foreground">
+                  Fixed rate as per ZRA regulations
+                </p>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Current: {vatRate}% (inclusive in job prices)
+                Formula: Turnover Tax = Gross Sales × 0.05
               </p>
             </div>
             <Separator />
@@ -154,7 +148,7 @@ export const Settings = () => {
                 placeholder="Enter TPIN"
               />
               <p className="text-xs text-muted-foreground">
-                This will appear on all VAT reports
+                This will appear on all tax reports
               </p>
             </div>
           </CardContent>

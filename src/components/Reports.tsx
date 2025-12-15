@@ -354,7 +354,7 @@ export const Reports = () => {
     }
   };
 
-  const generateMonthlyVATReport = async () => {
+  const generateTurnoverTaxReport = async () => {
     setGenerating(true);
     try {
       const startDate = format(dateRange.from, "yyyy-MM-dd");
@@ -367,31 +367,31 @@ export const Reports = () => {
         .lte("completion_date", endDate)
         .eq("status", "completed");
 
-      const vatRate = 0.16; // 16% VAT (inclusive)
+      const turnoverTaxRate = 0.05; // 5% Turnover Tax
       
-      const jobsWithVAT = jobs?.map(j => {
-        const totalWithVAT = Number(j.cost);
-        const netAmount = totalWithVAT / 1.16;
-        const vat = totalWithVAT - netAmount;
-        return { ...j, netAmount, vat, totalWithVAT };
+      const jobsWithTax = jobs?.map(j => {
+        const grossSales = Number(j.cost);
+        const turnoverTax = grossSales * turnoverTaxRate;
+        const netRevenue = grossSales - turnoverTax;
+        return { ...j, grossSales, turnoverTax, netRevenue };
       }) || [];
 
-      const totalWithVAT = jobsWithVAT.reduce((sum, j) => sum + j.totalWithVAT, 0);
-      const totalVAT = jobsWithVAT.reduce((sum, j) => sum + j.vat, 0);
-      const netSales = jobsWithVAT.reduce((sum, j) => sum + j.netAmount, 0);
+      const totalGrossSales = jobsWithTax.reduce((sum, j) => sum + j.grossSales, 0);
+      const totalTurnoverTax = jobsWithTax.reduce((sum, j) => sum + j.turnoverTax, 0);
+      const totalNetRevenue = jobsWithTax.reduce((sum, j) => sum + j.netRevenue, 0);
 
       const reportData = {
         period: `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`,
-        net_sales: netSales,
-        vat_rate: vatRate,
-        vat_amount: totalVAT,
-        total_with_vat: totalWithVAT,
+        gross_sales: totalGrossSales,
+        turnover_tax_rate: turnoverTaxRate,
+        turnover_tax_amount: totalTurnoverTax,
+        net_revenue: totalNetRevenue,
         jobs_count: jobs?.length || 0,
       };
 
       // Save to database first
       const { error: insertError } = await supabase.from("reports").insert({
-        report_type: "vat",
+        report_type: "turnover_tax",
         report_date: endDate,
         report_data: reportData as any,
       });
@@ -425,7 +425,7 @@ export const Reports = () => {
       doc.setFontSize(24);
       doc.text("NetGenix", 45, 20);
       doc.setFontSize(14);
-      doc.text("Monthly VAT Report", 45, 32);
+      doc.text("Turnover Tax Report", 45, 32);
       
       // Add watermark
       doc.setTextColor(200, 200, 200);
@@ -438,47 +438,47 @@ export const Reports = () => {
       doc.text(`TPIN: ${tpin}`, 14, 62);
       
       doc.setFontSize(16);
-      doc.text("VAT Summary", 14, 75);
+      doc.text("Turnover Tax Summary", 14, 75);
       
       autoTable(doc, {
         startY: 80,
         head: [["Description", "Amount"]],
         body: [
-          ["Total Amount (Incl. VAT)", `ZMW ${totalWithVAT.toFixed(2)}`],
-          ["VAT Rate (Inclusive)", `${(vatRate * 100).toFixed(0)}%`],
-          ["VAT Amount", `ZMW ${totalVAT.toFixed(2)}`],
-          ["Net Sales (Excl. VAT)", `ZMW ${netSales.toFixed(2)}`],
+          ["Gross Sales", `ZMW ${totalGrossSales.toFixed(2)}`],
+          ["Turnover Tax Rate", `${(turnoverTaxRate * 100).toFixed(0)}%`],
+          ["Turnover Tax Amount", `ZMW ${totalTurnoverTax.toFixed(2)}`],
+          ["Net Revenue (After Tax)", `ZMW ${totalNetRevenue.toFixed(2)}`],
           ["Number of Jobs", reportData.jobs_count.toString()],
         ],
         theme: "grid",
         headStyles: { fillColor: [14, 165, 233] },
       });
 
-      if (jobsWithVAT.length > 0) {
+      if (jobsWithTax.length > 0) {
         doc.setFontSize(16);
-        doc.text("Jobs Breakdown with VAT", 14, (doc as any).lastAutoTable.finalY + 15);
+        doc.text("Jobs Breakdown with Turnover Tax", 14, (doc as any).lastAutoTable.finalY + 15);
         
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Date", "Client", "Job Type", "Total (Incl. VAT)", "VAT (16%)", "Net Amount"]],
-          body: jobsWithVAT.map(j => [
+          head: [["Date", "Client", "Job Type", "Gross Sales", "Turnover Tax (5%)", "Net Revenue"]],
+          body: jobsWithTax.map(j => [
             j.completion_date || "-",
             j.client_name,
             j.job_type,
-            `ZMW ${j.totalWithVAT.toFixed(2)}`,
-            `ZMW ${j.vat.toFixed(2)}`,
-            `ZMW ${j.netAmount.toFixed(2)}`
+            `ZMW ${j.grossSales.toFixed(2)}`,
+            `ZMW ${j.turnoverTax.toFixed(2)}`,
+            `ZMW ${j.netRevenue.toFixed(2)}`
           ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
-          foot: [["", "", "Totals:", `ZMW ${totalWithVAT.toFixed(2)}`, `ZMW ${totalVAT.toFixed(2)}`, `ZMW ${netSales.toFixed(2)}`]],
+          foot: [["", "", "Totals:", `ZMW ${totalGrossSales.toFixed(2)}`, `ZMW ${totalTurnoverTax.toFixed(2)}`, `ZMW ${totalNetRevenue.toFixed(2)}`]],
           footStyles: { fillColor: [14, 165, 233], fontStyle: "bold" },
         });
       }
 
-      doc.save(`NetGenix-Monthly-VAT-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
+      doc.save(`NetGenix-Turnover-Tax-Report-${format(dateRange.from, "yyyy-MM-dd")}-to-${format(dateRange.to, "yyyy-MM-dd")}.pdf`);
 
-      toast.success("📊 Monthly VAT Report Generated!", {
+      toast.success("📊 Turnover Tax Report Generated!", {
         description: `PDF downloaded for period ${reportData.period}`,
       });
     } catch (error: any) {
@@ -831,8 +831,8 @@ export const Reports = () => {
                 <FileSpreadsheet className="h-5 w-5 text-secondary" />
               </div>
               <div>
-                <CardTitle>Monthly VAT Report</CardTitle>
-                <CardDescription>VAT breakdown per item</CardDescription>
+                <CardTitle>Turnover Tax Report</CardTitle>
+                <CardDescription>5% Turnover Tax breakdown</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -876,12 +876,12 @@ export const Reports = () => {
               </Popover>
             </div>
             <Button 
-              onClick={generateMonthlyVATReport} 
+              onClick={generateTurnoverTaxReport} 
               disabled={generating}
               className="w-full"
             >
               <Download className="mr-2 h-4 w-4" />
-              Generate VAT Report
+              Generate Tax Report
             </Button>
           </CardContent>
         </Card>
