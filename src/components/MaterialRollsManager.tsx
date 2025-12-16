@@ -28,11 +28,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, AlertTriangle, Download } from "lucide-react";
+import { Plus, Edit, Trash2, AlertTriangle, Download, CheckCircle, Archive } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/alert-dialog-confirm";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const MATERIAL_TYPES = ["Vinyl", "PVC Banner", "Banner Material", "DTF"] as const;
 type MaterialType = typeof MATERIAL_TYPES[number];
@@ -47,6 +48,7 @@ interface MaterialRoll {
   selling_rate_per_sqm: number;
   alert_level: number;
   created_at: string;
+  status: "Active" | "Completed";
 }
 
 export const MaterialRollsManager = () => {
@@ -54,7 +56,9 @@ export const MaterialRollsManager = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [rollToDelete, setRollToDelete] = useState<string | null>(null);
+  const [rollToComplete, setRollToComplete] = useState<string | null>(null);
   const [editingRoll, setEditingRoll] = useState<MaterialRoll | null>(null);
   const [formData, setFormData] = useState({
     roll_id: "",
@@ -94,7 +98,6 @@ export const MaterialRollsManager = () => {
     if (!user) return;
 
     try {
-      // Default width to 1m if not provided (especially for DTF)
       const width = formData.roll_width ? parseFloat(formData.roll_width) : 1;
       
       const rollData = {
@@ -107,6 +110,7 @@ export const MaterialRollsManager = () => {
           : parseFloat(formData.initial_length),
         selling_rate_per_sqm: parseFloat(formData.selling_rate_per_sqm),
         alert_level: parseFloat(formData.alert_level),
+        status: "Active",
       };
 
       if (editingRoll) {
@@ -140,6 +144,17 @@ export const MaterialRollsManager = () => {
   const handleDelete = async () => {
     if (!rollToDelete) return;
 
+    // Check if roll is completed - prevent deletion
+    const roll = rolls.find(r => r.id === rollToDelete);
+    if (roll?.status === "Completed") {
+      toast.error("Cannot delete completed rolls", {
+        description: "Completed rolls are archived for records and cannot be deleted.",
+      });
+      setDeleteDialogOpen(false);
+      setRollToDelete(null);
+      return;
+    }
+
     try {
       const { error } = await supabase.from("material_rolls").delete().eq("id", rollToDelete);
       if (error) throw error;
@@ -152,6 +167,28 @@ export const MaterialRollsManager = () => {
     } finally {
       setDeleteDialogOpen(false);
       setRollToDelete(null);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    if (!rollToComplete) return;
+
+    try {
+      const { error } = await supabase
+        .from("material_rolls")
+        .update({ status: "Completed" })
+        .eq("id", rollToComplete);
+
+      if (error) throw error;
+      toast.success("✅ Roll marked as completed and archived!");
+      fetchRolls();
+    } catch (error: any) {
+      toast.error("Failed to mark roll as completed", {
+        description: error.message,
+      });
+    } finally {
+      setCompleteDialogOpen(false);
+      setRollToComplete(null);
     }
   };
 
@@ -168,6 +205,12 @@ export const MaterialRollsManager = () => {
   };
 
   const openEditDialog = (roll: MaterialRoll) => {
+    if (roll.status === "Completed") {
+      toast.error("Cannot edit completed rolls", {
+        description: "Completed rolls are read-only.",
+      });
+      return;
+    }
     setEditingRoll(roll);
     setFormData({
       roll_id: roll.roll_id,
@@ -180,15 +223,19 @@ export const MaterialRollsManager = () => {
     setOpen(true);
   };
 
-  const isLowStock = (roll: MaterialRoll) => roll.remaining_length <= roll.alert_level;
+  const isLowStock = (roll: MaterialRoll) => roll.remaining_length <= roll.alert_level && roll.status === "Active";
 
   const getRemainingPercentage = (roll: MaterialRoll) => 
     (roll.remaining_length / roll.initial_length) * 100;
 
   const getSqm = (roll: MaterialRoll) => roll.roll_width * roll.remaining_length;
 
-  const exportToExcel = () => {
-    const exportData = rolls.map(roll => ({
+  const activeRolls = rolls.filter(r => r.status === "Active");
+  const completedRolls = rolls.filter(r => r.status === "Completed");
+  const lowStockCount = activeRolls.filter(isLowStock).length;
+
+  const exportToExcel = (rollsToExport: MaterialRoll[], filename: string) => {
+    const exportData = rollsToExport.map(roll => ({
       "Roll ID": roll.roll_id,
       "Material Type": roll.material_type,
       "Width (m)": roll.roll_width,
@@ -197,18 +244,114 @@ export const MaterialRollsManager = () => {
       "Remaining SQM": (roll.roll_width * roll.remaining_length).toFixed(2),
       "Selling Rate per SQM (ZMW)": roll.selling_rate_per_sqm,
       "Alert Level (m)": roll.alert_level,
-      "Status": isLowStock(roll) ? "LOW STOCK" : "OK",
+      "Status": roll.status,
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Material Rolls");
-    XLSX.writeFile(wb, `NetGenix_Material_Rolls_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
     
     toast.success("Material rolls exported to Excel!");
   };
 
-  const lowStockCount = rolls.filter(isLowStock).length;
+  const RollsTable = ({ rollsList, isCompletedView = false }: { rollsList: MaterialRoll[], isCompletedView?: boolean }) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Roll ID</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Width</TableHead>
+          <TableHead>Remaining</TableHead>
+          <TableHead>SQM Left</TableHead>
+          <TableHead>Rate/SQM</TableHead>
+          <TableHead>Status</TableHead>
+          {!isCompletedView && <TableHead className="text-right">Actions</TableHead>}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {loading ? (
+          <TableRow>
+            <TableCell colSpan={isCompletedView ? 7 : 8} className="text-center py-8 text-muted-foreground">
+              Loading rolls...
+            </TableCell>
+          </TableRow>
+        ) : rollsList.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={isCompletedView ? 7 : 8} className="text-center py-8 text-muted-foreground">
+              {isCompletedView ? "No completed rolls yet." : "No active material rolls. Add your first roll!"}
+            </TableCell>
+          </TableRow>
+        ) : (
+          rollsList.map((roll) => (
+            <TableRow key={roll.id} className={isLowStock(roll) ? "bg-warning/5" : ""}>
+              <TableCell className="font-medium">{roll.roll_id}</TableCell>
+              <TableCell>
+                <Badge variant="outline">{roll.material_type}</Badge>
+              </TableCell>
+              <TableCell>{roll.roll_width}m</TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  <span>{roll.remaining_length.toFixed(2)}m / {roll.initial_length}m</span>
+                  <Progress 
+                    value={getRemainingPercentage(roll)} 
+                    className="h-2"
+                  />
+                </div>
+              </TableCell>
+              <TableCell>{getSqm(roll).toFixed(2)} sqm</TableCell>
+              <TableCell>ZMW {roll.selling_rate_per_sqm.toFixed(2)}</TableCell>
+              <TableCell>
+                {roll.status === "Completed" ? (
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                    <Archive className="h-3 w-3 mr-1" />
+                    Completed
+                  </Badge>
+                ) : isLowStock(roll) ? (
+                  <Badge variant="destructive" className="animate-pulse">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Low Stock
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-success/20 text-success">
+                    Active
+                  </Badge>
+                )}
+              </TableCell>
+              {!isCompletedView && (
+                <TableCell className="text-right space-x-1">
+                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(roll)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setRollToComplete(roll.id);
+                      setCompleteDialogOpen(true);
+                    }}
+                    title="Mark as completed"
+                  >
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setRollToDelete(roll.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </TableCell>
+              )}
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  );
 
   return (
     <>
@@ -222,10 +365,6 @@ export const MaterialRollsManager = () => {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={exportToExcel}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
               <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
                 <DialogTrigger asChild>
                   <Button>
@@ -324,91 +463,53 @@ export const MaterialRollsManager = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {lowStockCount > 0 && (
-            <div className="mb-4 p-4 rounded-lg bg-warning/10 border border-warning/30 flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              <span className="text-sm font-medium">
-                {lowStockCount} roll{lowStockCount > 1 ? "s" : ""} below alert level
-              </span>
+          <Tabs defaultValue="active" className="w-full">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+              <TabsList>
+                <TabsTrigger value="active" className="gap-2">
+                  Active Rolls
+                  <Badge variant="secondary" className="ml-1">{activeRolls.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="gap-2">
+                  <Archive className="h-4 w-4" />
+                  Completed
+                  <Badge variant="secondary" className="ml-1">{completedRolls.length}</Badge>
+                </TabsTrigger>
+              </TabsList>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => exportToExcel(activeRolls, "NetGenix_Active_Rolls")}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Active
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => exportToExcel(completedRolls, "NetGenix_Completed_Rolls")}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Completed
+                </Button>
+              </div>
             </div>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Roll ID</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Width</TableHead>
-                <TableHead>Remaining</TableHead>
-                <TableHead>SQM Left</TableHead>
-                <TableHead>Rate/SQM</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Loading rolls...
-                  </TableCell>
-                </TableRow>
-              ) : rolls.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No material rolls in inventory. Add your first roll!
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rolls.map((roll) => (
-                  <TableRow key={roll.id} className={isLowStock(roll) ? "bg-warning/5" : ""}>
-                    <TableCell className="font-medium">{roll.roll_id}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{roll.material_type}</Badge>
-                    </TableCell>
-                    <TableCell>{roll.roll_width}m</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <span>{roll.remaining_length.toFixed(2)}m / {roll.initial_length}m</span>
-                        <Progress 
-                          value={getRemainingPercentage(roll)} 
-                          className="h-2"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>{getSqm(roll).toFixed(2)} sqm</TableCell>
-                    <TableCell>ZMW {roll.selling_rate_per_sqm.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {isLowStock(roll) ? (
-                        <Badge variant="destructive" className="animate-pulse">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Low Stock
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-success/20 text-success">
-                          OK
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(roll)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setRollToDelete(roll.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+
+            {lowStockCount > 0 && (
+              <div className="mb-4 p-4 rounded-lg bg-warning/10 border border-warning/30 flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                <span className="text-sm font-medium">
+                  {lowStockCount} roll{lowStockCount > 1 ? "s" : ""} below alert level
+                </span>
+              </div>
+            )}
+
+            <TabsContent value="active">
+              <RollsTable rollsList={activeRolls} />
+            </TabsContent>
+
+            <TabsContent value="completed">
+              <div className="mb-4 p-3 rounded-lg bg-muted/50 border border-border/50">
+                <p className="text-sm text-muted-foreground">
+                  Completed rolls are read-only and cannot be deleted. They are archived for historical records.
+                </p>
+              </div>
+              <RollsTable rollsList={completedRolls} isCompletedView />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -418,6 +519,14 @@ export const MaterialRollsManager = () => {
         onConfirm={handleDelete}
         title="Delete Roll"
         description="Are you sure you want to delete this roll? This action cannot be undone."
+      />
+
+      <ConfirmDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+        onConfirm={handleMarkComplete}
+        title="Mark Roll as Completed"
+        description="This roll will be moved to the Completed section and become read-only. Use this when the roll can no longer print proper lengths. This action cannot be undone."
       />
     </>
   );

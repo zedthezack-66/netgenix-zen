@@ -119,6 +119,7 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
       const { data, error } = await supabase
         .from("material_rolls")
         .select("id, roll_id, material_type, roll_width, remaining_length, selling_rate_per_sqm")
+        .eq("status", "Active")
         .gt("remaining_length", 0);
 
       if (error) throw error;
@@ -192,14 +193,28 @@ export const MaterialJobForm = ({ onJobCreated }: MaterialJobFormProps) => {
 
       if (jobError) throw jobError;
 
-      // Deduct from roll
+      // Deduct from roll and auto-complete if length reaches 0
       const newLength = selectedRoll.remaining_length - calculations.length_deducted;
+      const rollUpdate: any = { remaining_length: newLength };
+      
+      // Auto-mark as completed if remaining length reaches 0 or below
+      if (newLength <= 0) {
+        rollUpdate.status = "Completed";
+      }
+      
       const { error: rollError } = await supabase
         .from("material_rolls")
-        .update({ remaining_length: newLength })
+        .update(rollUpdate)
         .eq("id", formData.roll_id);
 
       if (rollError) throw rollError;
+      
+      // Notify if roll was auto-completed
+      if (newLength <= 0) {
+        toast.info(`📦 Roll ${selectedRoll.roll_id} has been completed and archived`, {
+          description: "The roll has no remaining material.",
+        });
+      }
 
       const usageDescription = selectedRoll.material_type === "DTF"
         ? `${calculations.length_deducted.toFixed(2)}m used`
