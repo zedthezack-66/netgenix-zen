@@ -259,10 +259,47 @@ export const JobsManager = () => {
     if (!jobToDelete) return;
 
     try {
+      // First, fetch the job to check for material roll
+      const { data: job, error: fetchError } = await supabase
+        .from("jobs")
+        .select("material_roll_id, length_deducted, sqm_used")
+        .eq("id", jobToDelete)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      // Restore material to roll if applicable
+      if (job?.material_roll_id && (job.length_deducted || job.sqm_used)) {
+        const materialToRestore = job.length_deducted || job.sqm_used || 0;
+        
+        const { data: roll, error: rollFetchError } = await supabase
+          .from("material_rolls")
+          .select("remaining_length")
+          .eq("id", job.material_roll_id)
+          .maybeSingle();
+
+        if (rollFetchError) throw rollFetchError;
+
+        if (roll) {
+          const { error: rollUpdateError } = await supabase
+            .from("material_rolls")
+            .update({ remaining_length: roll.remaining_length + materialToRestore })
+            .eq("id", job.material_roll_id);
+
+          if (rollUpdateError) throw rollUpdateError;
+        }
+      }
+
+      // Delete the job
       const { error } = await supabase.from("jobs").delete().eq("id", jobToDelete);
       if (error) throw error;
+
+      const restoredMsg = job?.length_deducted || job?.sqm_used 
+        ? ` (${(job.length_deducted || job.sqm_used)?.toFixed(2)} restored to roll)`
+        : "";
+      
       toast.success("🗑️ Job deleted successfully!", {
-        description: "Job has been removed from the system",
+        description: `Job removed${restoredMsg}`,
       });
       fetchJobs();
     } catch (error: any) {

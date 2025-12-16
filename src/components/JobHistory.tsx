@@ -115,6 +115,31 @@ export const JobHistory = () => {
     if (!deleteJobId) return;
     
     try {
+      // Find the job to get material info
+      const jobToDelete = jobs.find(j => j.id === deleteJobId);
+      
+      // Restore material to roll if applicable
+      if (jobToDelete?.material_roll_id && (jobToDelete.length_deducted || jobToDelete.sqm_used)) {
+        const materialToRestore = jobToDelete.length_deducted || jobToDelete.sqm_used || 0;
+        
+        const { data: roll, error: rollFetchError } = await supabase
+          .from("material_rolls")
+          .select("remaining_length")
+          .eq("id", jobToDelete.material_roll_id)
+          .maybeSingle();
+
+        if (rollFetchError) throw rollFetchError;
+
+        if (roll) {
+          const { error: rollUpdateError } = await supabase
+            .from("material_rolls")
+            .update({ remaining_length: roll.remaining_length + materialToRestore })
+            .eq("id", jobToDelete.material_roll_id);
+
+          if (rollUpdateError) throw rollUpdateError;
+        }
+      }
+
       const { error } = await supabase
         .from("jobs")
         .delete()
@@ -122,8 +147,12 @@ export const JobHistory = () => {
 
       if (error) throw error;
       
+      const restoredMsg = jobToDelete?.length_deducted || jobToDelete?.sqm_used 
+        ? ` (${(jobToDelete.length_deducted || jobToDelete.sqm_used)?.toFixed(2)} restored to roll)`
+        : "";
+      
       setJobs(jobs.filter(job => job.id !== deleteJobId));
-      toast.success("Job deleted successfully");
+      toast.success(`Job deleted${restoredMsg}`);
     } catch (error: any) {
       toast.error("Failed to delete job", { description: error.message });
     } finally {
@@ -133,6 +162,37 @@ export const JobHistory = () => {
 
   const handleClearAll = async () => {
     try {
+      // Get all material jobs and aggregate by roll
+      const materialJobs = jobs.filter(j => j.material_roll_id && (j.length_deducted || j.sqm_used));
+      const rollUpdates: Record<string, number> = {};
+      
+      for (const job of materialJobs) {
+        const rollId = job.material_roll_id!;
+        const amount = job.length_deducted || job.sqm_used || 0;
+        rollUpdates[rollId] = (rollUpdates[rollId] || 0) + amount;
+      }
+
+      // Restore material to each affected roll
+      for (const [rollId, amountToRestore] of Object.entries(rollUpdates)) {
+        const { data: roll, error: rollFetchError } = await supabase
+          .from("material_rolls")
+          .select("remaining_length")
+          .eq("id", rollId)
+          .maybeSingle();
+
+        if (rollFetchError) throw rollFetchError;
+
+        if (roll) {
+          const { error: rollUpdateError } = await supabase
+            .from("material_rolls")
+            .update({ remaining_length: roll.remaining_length + amountToRestore })
+            .eq("id", rollId);
+
+          if (rollUpdateError) throw rollUpdateError;
+        }
+      }
+
+      // Delete all completed jobs
       const { error } = await supabase
         .from("jobs")
         .delete()
@@ -140,8 +200,11 @@ export const JobHistory = () => {
 
       if (error) throw error;
       
+      const totalRestored = Object.values(rollUpdates).reduce((sum, val) => sum + val, 0);
+      const restoredMsg = totalRestored > 0 ? ` (${totalRestored.toFixed(2)} total restored to rolls)` : "";
+      
       setJobs([]);
-      toast.success("All job history cleared");
+      toast.success(`All job history cleared${restoredMsg}`);
     } catch (error: any) {
       toast.error("Failed to clear job history", { description: error.message });
     } finally {
