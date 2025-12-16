@@ -132,9 +132,11 @@ export const Reports = () => {
       const startDateStr = startDate.toISOString().split("T")[0];
       const endDateStr = endDate.toISOString().split("T")[0];
       
-      const [jobs, expenses] = await Promise.all([
+      const [jobs, expenses, completedRolls, allRolls] = await Promise.all([
         supabase.from("jobs").select("*").gte("completion_date", startDateStr).lte("completion_date", endDateStr).eq("status", "completed"),
         supabase.from("expenses").select("*").gte("expense_date", startDateStr).lte("expense_date", endDateStr),
+        supabase.from("material_rolls").select("*").eq("status", "Completed"),
+        supabase.from("material_rolls").select("*"),
       ]);
       
       const { data: allMaterials } = await supabase.from("materials").select("*");
@@ -144,6 +146,21 @@ export const Reports = () => {
       const expenseTotal = expenses.data?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
       const profit = revenue - expenseTotal;
 
+      // Calculate completed rolls by material type
+      const completedByType = (completedRolls.data || []).reduce((acc: any, r: any) => {
+        acc[r.material_type] = (acc[r.material_type] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Calculate material usage from jobs in this period
+      const materialUsage = (jobs.data || []).reduce((acc: any, j: any) => {
+        if (j.materials_used) {
+          const type = j.job_type?.replace(' Print', '') || 'Other';
+          acc[type] = (acc[type] || 0) + (Number(j.sqm_used) || Number(j.length_deducted) || 0);
+        }
+        return acc;
+      }, {});
+
       const reportData = {
         period: `${format(startDate, "MMM dd")} - ${format(endDate, "MMM dd, yyyy")}`,
         revenue,
@@ -151,6 +168,9 @@ export const Reports = () => {
         profit,
         jobs_completed: jobs.data?.length || 0,
         low_stock_items: materials.length,
+        completed_rolls_total: completedRolls.data?.length || 0,
+        completed_rolls_by_type: completedByType,
+        material_usage: materialUsage,
       };
 
       // Save to database first
@@ -244,6 +264,7 @@ export const Reports = () => {
           ["Expenses", `ZMW ${expenseTotal.toFixed(2)}`],
           ["Net Profit", `ZMW ${profit.toFixed(2)}`],
           ["Low Stock Items", reportData.low_stock_items.toString()],
+          ["Completed Rolls (Total)", reportData.completed_rolls_total.toString()],
         ],
         theme: "grid",
         headStyles: { fillColor: [14, 165, 233] },
@@ -304,6 +325,34 @@ export const Reports = () => {
         });
       }
 
+      // Add Completed Rolls by Material Type section
+      if (Object.keys(reportData.completed_rolls_by_type).length > 0) {
+        doc.setFontSize(16);
+        doc.text("Completed Rolls by Material Type", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Material Type", "Completed Rolls"]],
+          body: Object.entries(reportData.completed_rolls_by_type).map(([type, count]) => [type, (count as number).toString()]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+        });
+      }
+
+      // Add Material Usage Summary section
+      if (Object.keys(reportData.material_usage).length > 0) {
+        doc.setFontSize(16);
+        doc.text("Material Usage Summary", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Material Type", "Usage (SQM/m)"]],
+          body: Object.entries(reportData.material_usage).map(([type, usage]) => [type, (usage as number).toFixed(2)]),
+          theme: "striped",
+          headStyles: { fillColor: [34, 197, 94] },
+        });
+      }
+
       doc.save(`NetGenix-Weekly-Report-${format(startDate, "yyyy-MM-dd")}-to-${format(endDate, "yyyy-MM-dd")}.pdf`);
 
       toast.success("📊 Weekly Report Generated!", {
@@ -324,9 +373,10 @@ export const Reports = () => {
       const startDate = format(dateRange.from, "yyyy-MM-dd");
       const endDate = format(dateRange.to, "yyyy-MM-dd");
 
-      const [jobs, expenses] = await Promise.all([
+      const [jobs, expenses, completedRolls] = await Promise.all([
         supabase.from("jobs").select("*").gte("completion_date", startDate).lte("completion_date", endDate).eq("status", "completed"),
         supabase.from("expenses").select("*").gte("expense_date", startDate).lte("expense_date", endDate),
+        supabase.from("material_rolls").select("*").eq("status", "Completed"),
       ]);
 
       const { data: allMaterials } = await supabase.from("materials").select("*");
@@ -336,6 +386,21 @@ export const Reports = () => {
       const expenseTotal = expenses.data?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
       const profit = revenue - expenseTotal;
 
+      // Calculate completed rolls by material type
+      const completedByType = (completedRolls.data || []).reduce((acc: any, r: any) => {
+        acc[r.material_type] = (acc[r.material_type] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Calculate material usage from jobs in this period
+      const materialUsage = (jobs.data || []).reduce((acc: any, j: any) => {
+        if (j.materials_used) {
+          const type = j.job_type?.replace(' Print', '') || 'Other';
+          acc[type] = (acc[type] || 0) + (Number(j.sqm_used) || Number(j.length_deducted) || 0);
+        }
+        return acc;
+      }, {});
+
       const reportData = {
         period: `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`,
         revenue,
@@ -343,6 +408,9 @@ export const Reports = () => {
         profit,
         jobs_completed: jobs.data?.length || 0,
         low_stock_items: materials.length,
+        completed_rolls_total: completedRolls.data?.length || 0,
+        completed_rolls_by_type: completedByType,
+        material_usage: materialUsage,
       };
 
       // Save to database first
@@ -438,6 +506,7 @@ export const Reports = () => {
           ["Expenses", `ZMW ${expenseTotal.toFixed(2)}`],
           ["Net Profit", `ZMW ${profit.toFixed(2)}`],
           ["Low Stock Items", reportData.low_stock_items.toString()],
+          ["Completed Rolls (Total)", reportData.completed_rolls_total.toString()],
         ],
         theme: "grid",
         headStyles: { fillColor: [14, 165, 233] },
@@ -495,6 +564,34 @@ export const Reports = () => {
           body: materials.map(m => [m.name, `${m.quantity} ${m.unit}`, `${m.threshold} ${m.unit}`]),
           theme: "striped",
           headStyles: { fillColor: [239, 68, 68] },
+        });
+      }
+
+      // Add Completed Rolls by Material Type section
+      if (Object.keys(reportData.completed_rolls_by_type).length > 0) {
+        doc.setFontSize(16);
+        doc.text("Completed Rolls by Material Type", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Material Type", "Completed Rolls"]],
+          body: Object.entries(reportData.completed_rolls_by_type).map(([type, count]) => [type, (count as number).toString()]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233] },
+        });
+      }
+
+      // Add Material Usage Summary section
+      if (Object.keys(reportData.material_usage).length > 0) {
+        doc.setFontSize(16);
+        doc.text("Material Usage Summary", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [["Material Type", "Usage (SQM/m)"]],
+          body: Object.entries(reportData.material_usage).map(([type, usage]) => [type, (usage as number).toFixed(2)]),
+          theme: "striped",
+          headStyles: { fillColor: [34, 197, 94] },
         });
       }
 

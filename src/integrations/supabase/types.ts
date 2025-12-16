@@ -155,6 +155,7 @@ export type Database = {
           roll_id: string
           roll_width: number
           selling_rate_per_sqm: number
+          status: string
           updated_at: string | null
         }
         Insert: {
@@ -169,6 +170,7 @@ export type Database = {
           roll_id: string
           roll_width: number
           selling_rate_per_sqm?: number
+          status?: string
           updated_at?: string | null
         }
         Update: {
@@ -183,6 +185,7 @@ export type Database = {
           roll_id?: string
           roll_width?: number
           selling_rate_per_sqm?: number
+          status?: string
           updated_at?: string | null
         }
         Relationships: []
