@@ -364,7 +364,7 @@ export const JobsManager = () => {
                     New Job
                   </Button>
                 </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingJob ? "Edit Job" : "Create New Job"}
@@ -373,6 +373,17 @@ export const JobsManager = () => {
                   Fill in the details for the printing/embroidery job
                 </DialogDescription>
               </DialogHeader>
+              
+              {/* Pending Payment Alert */}
+              {editingJob && (!editingJob.payment_received || editingJob.payment_received <= 0) && (
+                <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm">
+                  <p className="font-medium text-warning">⚠️ Payment Pending</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Scroll down to add payment and complete this job
+                  </p>
+                </div>
+              )}
+              
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="client_name">Client Name</Label>
@@ -592,9 +603,19 @@ export const JobsManager = () => {
                   )}
                 </div>
                 
-                {/* Payment Section */}
-                <div className="border-t pt-4 mt-4">
-                  <Label className="text-sm font-medium mb-3 block">Payment Details</Label>
+                {/* Payment Section - Highlighted for pending jobs */}
+                <div className={cn(
+                  "border rounded-lg p-4 mt-4 space-y-3",
+                  editingJob && (!editingJob.payment_received || editingJob.payment_received <= 0)
+                    ? "border-primary bg-primary/5"
+                    : "border-border"
+                )}>
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    💰 Payment Details
+                    {editingJob && (!editingJob.payment_received || editingJob.payment_received <= 0) && (
+                      <Badge variant="outline" className="text-xs border-warning text-warning">Required</Badge>
+                    )}
+                  </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="payment_received" className="text-xs">Amount (ZMW)</Label>
@@ -604,7 +625,8 @@ export const JobsManager = () => {
                         step="0.01"
                         value={formData.payment_received}
                         onChange={(e) => setFormData({ ...formData, payment_received: e.target.value })}
-                        placeholder="0.00"
+                        placeholder={formData.cost || "0.00"}
+                        className={editingJob && (!editingJob.payment_received || editingJob.payment_received <= 0) ? "border-primary" : ""}
                       />
                     </div>
                     <div>
@@ -624,7 +646,7 @@ export const JobsManager = () => {
                       </Select>
                     </div>
                   </div>
-                  <div className="mt-3">
+                  <div>
                     <Label htmlFor="received_by" className="text-xs">Received By</Label>
                     <Input
                       id="received_by"
@@ -646,9 +668,32 @@ export const JobsManager = () => {
                     }
                   />
                 </div>
-                 <Button type="submit" className="w-full">
-                  {editingJob ? "Update Job" : "Create Job"}
-                </Button>
+                
+                {/* Action Buttons */}
+                <div className="space-y-2 pt-2">
+                  <Button type="submit" className="w-full">
+                    {editingJob ? "Update Job" : "Create Job"}
+                  </Button>
+                  
+                  {/* Quick Complete Button - Only shows when editing pending job with payment filled */}
+                  {editingJob && formData.status !== "completed" && formData.payment_received && parseFloat(formData.payment_received) > 0 && formData.payment_mode && (
+                    <Button 
+                      type="button" 
+                      variant="default"
+                      className="w-full bg-success hover:bg-success/90"
+                      onClick={() => {
+                        setFormData({ ...formData, status: "completed" });
+                        // Auto-submit after status change
+                        setTimeout(() => {
+                          document.querySelector<HTMLFormElement>('form')?.requestSubmit();
+                        }, 100);
+                      }}
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      Confirm Payment & Complete Job
+                    </Button>
+                  )}
+                </div>
               </form>
             </DialogContent>
           </Dialog>
