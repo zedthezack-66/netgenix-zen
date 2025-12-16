@@ -619,6 +619,47 @@ export const Reports = () => {
         });
       }
 
+      // Per-Job Breakdown Section
+      if (jobs && jobs.length > 0) {
+        doc.addPage();
+        doc.setFontSize(16);
+        doc.text("Per-Job Material Usage Breakdown", 14, 20);
+        
+        const jobsWithRollInfo = jobs.map((job: any) => {
+          const roll = (rolls || []).find((r: any) => r.id === job.material_roll_id);
+          return {
+            ...job,
+            roll_id: roll?.roll_id || 'N/A',
+            material_type: roll?.material_type || 'N/A',
+          };
+        });
+
+        const totalJobAmount = jobsWithRollInfo.reduce((sum: number, j: any) => sum + Number(j.cost), 0);
+        const totalJobSqm = jobsWithRollInfo.reduce((sum: number, j: any) => sum + (Number(j.sqm_used) || 0), 0);
+        const totalJobLength = jobsWithRollInfo.reduce((sum: number, j: any) => sum + (Number(j.length_deducted) || 0), 0);
+        
+        autoTable(doc, {
+          startY: 28,
+          head: [["Date", "Client", "Roll ID", "Width (m)", "Height (m)", "Rate/SQM", "SQM Used", "Deducted", "Amount Due"]],
+          body: jobsWithRollInfo.map((job: any) => [
+            job.completion_date ? format(new Date(job.completion_date), "MMM dd, yyyy") : 'N/A',
+            job.client_name,
+            job.roll_id,
+            job.job_width ? Number(job.job_width).toFixed(2) : '-',
+            job.job_height ? Number(job.job_height).toFixed(2) : '-',
+            job.rate_per_sqm ? `ZMW ${Number(job.rate_per_sqm).toFixed(2)}` : '-',
+            job.sqm_used ? Number(job.sqm_used).toFixed(2) : '-',
+            job.length_deducted ? `${Number(job.length_deducted).toFixed(2)}m` : '-',
+            `ZMW ${Number(job.cost).toFixed(2)}`
+          ]),
+          theme: "striped",
+          headStyles: { fillColor: [14, 165, 233], fontSize: 7 },
+          styles: { fontSize: 7 },
+          foot: [["", "", "Totals:", "", "", "", totalJobSqm.toFixed(2), `${totalJobLength.toFixed(2)}m`, `ZMW ${totalJobAmount.toFixed(2)}`]],
+          footStyles: { fillColor: [14, 165, 233], fontStyle: "bold", fontSize: 7 },
+        });
+      }
+
       if (lowStockRolls.length > 0) {
         doc.setFontSize(16);
         doc.text("Low Stock Alert", 14, (doc as any).lastAutoTable.finalY + 15);
