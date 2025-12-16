@@ -72,8 +72,8 @@ export const Dashboard = () => {
       const lowStockItems =
         materials?.filter((m) => Number(m.quantity) < Number(m.threshold)).length || 0;
 
-      // Fetch material rolls
-      const { data: rolls } = await supabase.from("material_rolls").select("*");
+      // Fetch material rolls (only Active rolls for dashboard)
+      const { data: rolls } = await supabase.from("material_rolls").select("*").eq("status", "Active");
       const lowRollAlerts = rolls?.filter((r: any) => Number(r.remaining_length) <= Number(r.alert_level)).length || 0;
       setRollsData((rolls as MaterialRoll[]) || []);
 
@@ -251,9 +251,9 @@ export const Dashboard = () => {
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
               <ScrollText className="h-5 w-5 text-primary" />
-              Material Rolls Status
+              Active Material Rolls
             </CardTitle>
-            <p className="text-sm text-muted-foreground">{stats.totalRolls} rolls in inventory</p>
+            <p className="text-sm text-muted-foreground">{stats.totalRolls} active rolls in inventory</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
