@@ -671,7 +671,6 @@ export const Reports = () => {
         const sqmPrinted = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.sqm_used) || 0), 0);
         const lengthUsed = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.length_deducted) || 0), 0);
         const revenueGenerated = rollJobs.reduce((sum: number, j: any) => sum + Number(j.cost), 0);
-        const costConsumed = sqmPrinted * Number(roll.cost_per_sqm);
         const isLowStock = Number(roll.remaining_length) <= Number(roll.alert_level);
         
         return {
@@ -679,22 +678,17 @@ export const Reports = () => {
           sqmPrinted,
           lengthUsed,
           revenueGenerated,
-          costConsumed,
-          profit: revenueGenerated - costConsumed,
           isLowStock,
         };
       });
 
       const lowStockRolls = rollUsage.filter((r: any) => r.isLowStock);
       const totalRevenue = rollUsage.reduce((sum: number, r: any) => sum + r.revenueGenerated, 0);
-      const totalCost = rollUsage.reduce((sum: number, r: any) => sum + r.costConsumed, 0);
 
       // Save to database
       const reportData = {
         period: `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`,
         total_revenue: totalRevenue,
-        total_cost: totalCost,
-        profit: totalRevenue - totalCost,
         rolls_count: rolls?.length || 0,
         low_stock_count: lowStockRolls.length,
       };
@@ -741,8 +735,6 @@ export const Reports = () => {
         body: [
           ["Total Rolls", (rolls?.length || 0).toString()],
           ["Revenue from Materials", `ZMW ${totalRevenue.toFixed(2)}`],
-          ["Material Cost Consumed", `ZMW ${totalCost.toFixed(2)}`],
-          ["Net Profit", `ZMW ${(totalRevenue - totalCost).toFixed(2)}`],
           ["Low Stock Rolls", lowStockRolls.length.toString()],
         ],
         theme: "grid",
@@ -758,7 +750,7 @@ export const Reports = () => {
         
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [["Roll ID", "Type", "SQM Used", "Length Used", "Remaining", "Revenue", "Cost", "Status"]],
+          head: [["Roll ID", "Type", "SQM Used", "Length Used", "Remaining", "Revenue", "Status"]],
           body: rollUsage.map((r: any) => [
             r.roll_id,
             r.material_type,
@@ -766,13 +758,12 @@ export const Reports = () => {
             `${r.lengthUsed.toFixed(2)}m`,
             `${Number(r.remaining_length).toFixed(2)}m`,
             `ZMW ${r.revenueGenerated.toFixed(2)}`,
-            `ZMW ${r.costConsumed.toFixed(2)}`,
             r.isLowStock ? "LOW" : "OK"
           ]),
           theme: "striped",
           headStyles: { fillColor: [14, 165, 233] },
           styles: { fontSize: 8 },
-          foot: [["", "Totals:", totalSqmUsed.toFixed(2), `${totalLengthUsed.toFixed(2)}m`, "", `ZMW ${totalRevenue.toFixed(2)}`, `ZMW ${totalCost.toFixed(2)}`, ""]],
+          foot: [["", "Totals:", totalSqmUsed.toFixed(2), `${totalLengthUsed.toFixed(2)}m`, "", `ZMW ${totalRevenue.toFixed(2)}`, ""]],
           footStyles: { fillColor: [14, 165, 233], fontStyle: "bold", fontSize: 8 },
         });
       }
@@ -870,7 +861,6 @@ export const Reports = () => {
         const sqmPrinted = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.sqm_used) || 0), 0);
         const lengthUsed = rollJobs.reduce((sum: number, j: any) => sum + (Number(j.length_deducted) || 0), 0);
         const revenueGenerated = rollJobs.reduce((sum: number, j: any) => sum + Number(j.cost), 0);
-        const costConsumed = sqmPrinted * Number(roll.cost_per_sqm);
         
         return {
           "Roll ID": roll.roll_id,
