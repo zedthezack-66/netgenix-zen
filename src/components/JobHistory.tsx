@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Download, Calendar } from "lucide-react";
+import { Search, Download, Calendar, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/alert-dialog-confirm";
 
 interface Job {
   id: string;
@@ -49,6 +50,8 @@ export const JobHistory = () => {
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
 
   useEffect(() => {
     fetchCompletedJobs();
@@ -108,6 +111,44 @@ export const JobHistory = () => {
     }
   };
 
+  const handleDeleteJob = async () => {
+    if (!deleteJobId) return;
+    
+    try {
+      const { error } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("id", deleteJobId);
+
+      if (error) throw error;
+      
+      setJobs(jobs.filter(job => job.id !== deleteJobId));
+      toast.success("Job deleted successfully");
+    } catch (error: any) {
+      toast.error("Failed to delete job", { description: error.message });
+    } finally {
+      setDeleteJobId(null);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      const { error } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("status", "completed");
+
+      if (error) throw error;
+      
+      setJobs([]);
+      toast.success("All job history cleared");
+    } catch (error: any) {
+      toast.error("Failed to clear job history", { description: error.message });
+    } finally {
+      setShowClearAllDialog(false);
+    }
+  };
+
   const exportToExcel = () => {
     const exportData = filteredJobs.map(job => ({
       "Job ID": job.id.substring(0, 8),
@@ -136,116 +177,157 @@ export const JobHistory = () => {
   const totalJobs = filteredJobs.length;
 
   return (
-    <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-2xl">Job History</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {totalJobs} completed jobs • ZMW {totalRevenue.toFixed(2)} total revenue
-            </p>
+    <>
+      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-2xl">Job History</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {totalJobs} completed jobs • ZMW {totalRevenue.toFixed(2)} total revenue
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={exportToExcel}>
+                <Download className="mr-2 h-4 w-4" />
+                Export to Excel
+              </Button>
+              {jobs.length > 0 && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowClearAllDialog(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear All
+                </Button>
+              )}
+            </div>
           </div>
-          <Button variant="outline" onClick={exportToExcel}>
-            <Download className="mr-2 h-4 w-4" />
-            Export to Excel
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by client or job type..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by client or job type..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <Calendar className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Filter by date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="week">Past Week</SelectItem>
+                <SelectItem value="month">Past Month</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <Calendar className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filter by date" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="week">Past Week</SelectItem>
-              <SelectItem value="month">Past Month</SelectItem>
-              <SelectItem value="custom">Custom Range</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
-        {dateFilter === "custom" && (
-          <div className="flex gap-3">
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="flex-1"
-            />
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="flex-1"
-            />
-          </div>
-        )}
+          {dateFilter === "custom" && (
+            <div className="flex gap-3">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="flex-1"
+              />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+          )}
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Mode</TableHead>
-                <TableHead>Completed</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Loading job history...
-                  </TableCell>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead>Payment</TableHead>
+                  <TableHead>Mode</TableHead>
+                  <TableHead>Completed</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
-              ) : filteredJobs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No completed jobs found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredJobs.map((job) => (
-                  <TableRow key={job.id}>
-                    <TableCell className="font-medium">{job.client_name}</TableCell>
-                    <TableCell>{job.job_type}</TableCell>
-                    <TableCell>ZMW {job.cost.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <span className="text-success font-medium">
-                        ZMW {(job.payment_received || job.cost).toFixed(2)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {job.payment_mode || "N/A"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {job.completion_date
-                        ? new Date(job.completion_date).toLocaleDateString()
-                        : "-"}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Loading job history...
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+                ) : filteredJobs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No completed jobs found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredJobs.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell className="font-medium">{job.client_name}</TableCell>
+                      <TableCell>{job.job_type}</TableCell>
+                      <TableCell>ZMW {job.cost.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <span className="text-success font-medium">
+                          ZMW {(job.payment_received || job.cost).toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {job.payment_mode || "N/A"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {job.completion_date
+                          ? new Date(job.completion_date).toLocaleDateString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteJobId(job.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        open={!!deleteJobId}
+        onOpenChange={(open) => !open && setDeleteJobId(null)}
+        onConfirm={handleDeleteJob}
+        title="Delete Job"
+        description="Are you sure you want to delete this job from history? This action cannot be undone."
+      />
+
+      <ConfirmDialog
+        open={showClearAllDialog}
+        onOpenChange={setShowClearAllDialog}
+        onConfirm={handleClearAll}
+        title="Clear All Job History"
+        description="Are you sure you want to delete ALL completed jobs from history? This action cannot be undone."
+        confirmText="Clear All"
+      />
+    </>
   );
 };
