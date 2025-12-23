@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Percent, Package, Save, Database, Download } from "lucide-react";
+import { Building2, Percent, Package, Save, Database, Download, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ServiceAgreement } from "./ServiceAgreement";
@@ -15,22 +15,61 @@ export const Settings = () => {
   const [tpin, setTpin] = useState("");
   const [saving, setSaving] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [hasExistingPassword, setHasExistingPassword] = useState(false);
 
   const handleSave = () => {
+    // Validate password if being set
+    if (adminPassword || confirmPassword) {
+      if (adminPassword !== confirmPassword) {
+        toast.error("Passwords don't match", {
+          description: "Please ensure both password fields match",
+        });
+        return;
+      }
+      if (adminPassword.length < 4) {
+        toast.error("Password too short", {
+          description: "Admin password must be at least 4 characters",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     
-    // Simulate save to localStorage
-    localStorage.setItem("netgenix_settings", JSON.stringify({
+    // Prepare settings object
+    const settings: any = {
       businessName,
       turnoverTaxRate: 5, // Fixed 5% turnover tax
       stockThreshold: parseFloat(stockThreshold),
       tpin,
-    }));
+    };
+
+    // Only update password if new one is provided
+    if (adminPassword) {
+      settings.adminPassword = adminPassword;
+    } else {
+      // Preserve existing password if not changing
+      const existing = localStorage.getItem("netgenix_settings");
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        if (parsed.adminPassword) {
+          settings.adminPassword = parsed.adminPassword;
+        }
+      }
+    }
+
+    localStorage.setItem("netgenix_settings", JSON.stringify(settings));
 
     setTimeout(() => {
       setSaving(false);
+      setAdminPassword("");
+      setConfirmPassword("");
+      setHasExistingPassword(!!settings.adminPassword);
       toast.success("⚙️ Settings Saved!", {
-        description: "Your preferences have been updated successfully",
+        description: adminPassword ? "Settings and admin password updated" : "Your preferences have been updated successfully",
       });
     }, 500);
   };
@@ -77,6 +116,7 @@ export const Settings = () => {
       setBusinessName(settings.businessName || "NetGenix");
       setStockThreshold(settings.stockThreshold?.toString() || "10");
       setTpin(settings.tpin || "");
+      setHasExistingPassword(!!settings.adminPassword);
     }
   }, []);
 
@@ -217,6 +257,67 @@ export const Settings = () => {
                 )}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Admin Password Card */}
+        <Card className="border-destructive/20 hover:shadow-lg transition-all duration-300">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <Lock className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <CardTitle>Admin Password</CardTitle>
+                <CardDescription>Protect sensitive actions like job deletion</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {hasExistingPassword && (
+              <div className="p-3 bg-success/10 border border-success/20 rounded-md">
+                <p className="text-sm text-success font-medium">✓ Admin password is set</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter a new password below to change it
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="adminPassword">
+                {hasExistingPassword ? "New Admin Password" : "Set Admin Password"}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="adminPassword"
+                  type={showPassword ? "text" : "password"}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder={hasExistingPassword ? "Enter new password to change" : "Enter admin password"}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This password is required to delete jobs from Job History
+            </p>
           </CardContent>
         </Card>
       </div>
