@@ -73,6 +73,7 @@ export type Database = {
           payment_at: string | null
           payment_mode: string | null
           payment_received: number | null
+          price_per_item: number | null
           rate_per_sqm: number | null
           received_by: string | null
           sqm_used: number | null
@@ -96,6 +97,7 @@ export type Database = {
           payment_at?: string | null
           payment_mode?: string | null
           payment_received?: number | null
+          price_per_item?: number | null
           rate_per_sqm?: number | null
           received_by?: string | null
           sqm_used?: number | null
@@ -119,6 +121,7 @@ export type Database = {
           payment_at?: string | null
           payment_mode?: string | null
           payment_received?: number | null
+          price_per_item?: number | null
           rate_per_sqm?: number | null
           received_by?: string | null
           sqm_used?: number | null
@@ -225,6 +228,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_password_hash: string | null
           avatar_url: string | null
           created_at: string | null
           full_name: string | null
@@ -232,6 +236,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          admin_password_hash?: string | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
@@ -239,6 +244,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          admin_password_hash?: string | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null

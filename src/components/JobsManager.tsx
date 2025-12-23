@@ -127,6 +127,8 @@ interface Job {
   payment_mode?: string;
   received_by?: string;
   payment_at?: string;
+  job_quantity?: number;
+  price_per_item?: number;
 }
 
 export const JobsManager = () => {
@@ -150,7 +152,12 @@ export const JobsManager = () => {
     payment_received: "",
     payment_mode: "",
     received_by: "",
+    job_quantity: "1",
+    price_per_item: "",
   });
+
+  // Auto-calculate cost when quantity or price changes
+  const calculatedCost = (parseInt(formData.job_quantity) || 0) * (parseFloat(formData.price_per_item) || 0);
 
   useEffect(() => {
     fetchJobs();
@@ -210,17 +217,23 @@ export const JobsManager = () => {
     }
 
     try {
+      const quantity = parseInt(formData.job_quantity) || 1;
+      const pricePerItem = parseFloat(formData.price_per_item) || 0;
+      const totalCost = pricePerItem > 0 ? quantity * pricePerItem : parseFloat(formData.cost);
+
       const jobData = {
         client_name: formData.client_name,
         job_type: formData.job_type,
         materials_used: formData.materials_used,
-        cost: parseFloat(formData.cost),
+        cost: totalCost,
         status: formData.status,
         completion_date: formData.status === "completed" ? (formData.completion_date || new Date().toISOString().split("T")[0]) : formData.completion_date || null,
         payment_received: paymentAmount,
         payment_mode: formData.payment_mode || null,
         received_by: formData.received_by || null,
         payment_at: formData.status === "completed" && paymentAmount > 0 ? new Date().toISOString() : null,
+        job_quantity: quantity,
+        price_per_item: pricePerItem > 0 ? pricePerItem : null,
       };
 
       if (editingJob) {
@@ -328,6 +341,8 @@ export const JobsManager = () => {
       payment_received: "",
       payment_mode: "",
       received_by: "",
+      job_quantity: "1",
+      price_per_item: "",
     });
     setEditingJob(null);
   };
@@ -344,6 +359,8 @@ export const JobsManager = () => {
       payment_received: (job.payment_received || "").toString(),
       payment_mode: job.payment_mode || "",
       received_by: job.received_by || "",
+      job_quantity: (job.job_quantity || 1).toString(),
+      price_per_item: (job.price_per_item || "").toString(),
     });
     setOpen(true);
   };
@@ -596,18 +613,59 @@ export const JobsManager = () => {
                     placeholder="Optional"
                   />
                 </div>
+                
+                {/* Quantity & Pricing Section */}
+                <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                  <Label className="text-sm font-medium">📦 Quantity & Pricing</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="job_quantity" className="text-xs">Quantity</Label>
+                      <Input
+                        id="job_quantity"
+                        type="number"
+                        min="1"
+                        value={formData.job_quantity}
+                        onChange={(e) => setFormData({ ...formData, job_quantity: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="price_per_item" className="text-xs">Price per Item (ZMW)</Label>
+                      <Input
+                        id="price_per_item"
+                        type="number"
+                        step="0.01"
+                        value={formData.price_per_item}
+                        onChange={(e) => setFormData({ ...formData, price_per_item: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  {calculatedCost > 0 && (
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="text-sm text-muted-foreground">Calculated Total:</span>
+                      <span className="font-bold text-primary">ZMW {calculatedCost.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div>
-                  <Label htmlFor="cost">Cost (ZMW)</Label>
+                  <Label htmlFor="cost">Total Cost (ZMW)</Label>
                   <Input
                     id="cost"
                     type="number"
                     step="0.01"
-                    value={formData.cost}
+                    value={calculatedCost > 0 ? calculatedCost.toFixed(2) : formData.cost}
                     onChange={(e) =>
                       setFormData({ ...formData, cost: e.target.value })
                     }
                     required
+                    disabled={calculatedCost > 0}
+                    className={calculatedCost > 0 ? "bg-muted" : ""}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {calculatedCost > 0 ? "Auto-calculated from Qty × Price" : "Enter total or use Qty × Price above"}
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
@@ -762,12 +820,14 @@ export const JobsManager = () => {
         <p className="text-xs text-muted-foreground">
           Completed jobs automatically move to Job History tab
         </p>
-        <Table>
+         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Client</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Cost</TableHead>
+              <TableHead>Qty</TableHead>
+              <TableHead>Price/Item</TableHead>
+              <TableHead>Total Cost</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Completion</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -776,7 +836,7 @@ export const JobsManager = () => {
           <TableBody>
             {filteredJobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No jobs found matching your criteria
                 </TableCell>
               </TableRow>
@@ -785,7 +845,9 @@ export const JobsManager = () => {
               <TableRow key={job.id}>
                 <TableCell className="font-medium">{job.client_name}</TableCell>
                 <TableCell>{job.job_type}</TableCell>
-                <TableCell>ZMW {job.cost.toFixed(2)}</TableCell>
+                <TableCell>{job.job_quantity || 1}</TableCell>
+                <TableCell>{job.price_per_item ? `ZMW ${job.price_per_item.toFixed(2)}` : "-"}</TableCell>
+                <TableCell className="font-medium">ZMW {job.cost.toFixed(2)}</TableCell>
                 <TableCell>{getStatusBadge(job.status)}</TableCell>
                 <TableCell>
                   {job.completion_date
